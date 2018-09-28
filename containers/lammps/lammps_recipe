@@ -187,10 +187,8 @@ base=`pwd`
            echo "Files are copies here $WORKDIR"
         fi
         
-        #wget https://raw.githubusercontent.com/intel/Intel-HPC-Container/master/sysinfo.sh -P $WORKDIR
-        STORAGE=/nfs/pdx/home/KNL_Benchmarking_Apps/containers-storage
-        cp $STORAGE/sysinfo.sh -P $WORKDIR
-        
+        wget https://raw.githubusercontent.com/intel/HPC-containers-from-Intel/master/sysinfo.sh -P $WORKDIR
+                
         chmod -R 777 $WORKDIR
 
         exit 0
