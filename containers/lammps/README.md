@@ -104,7 +104,7 @@ Required prerequisites:
  
  	$ sudo singularity build lammps.simg lammps_recipe
  
- > Note, the lammps_recipe file may need some minor adjustment depends on the environment you will be building on.
+ > Note, the lammps_recipe file may need some minor adjustment depending on the environment you will be building on.
 ***
 ### Recommended links:
 
