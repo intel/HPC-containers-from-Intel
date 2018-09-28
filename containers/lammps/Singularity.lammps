@@ -26,7 +26,16 @@ EXAMPLES:
 
   - Run multiple apps:
         $ for app in sysinfo gromacs ; do singularity run --app $app <container-name.simg> ; done
+  
+   - Run from inside the container:
+	$ singularity shell <container-name.simg>
+	$ cd /$WORKDIR
+	$ source /opt/intel/psxe_runtime/linux/bin/psxevars.sh
+	$ $RunCommand
 
+    - Run your own workload using the exec command (http://singularity.lbl.gov/docs-exec):
+	$ singularity exec <container-name.simg> $SINGULARITY_ROOTFS/$WORKDIR/$BIN <LocalPath>/$WORKLOAD arg arg ...
+	
 ##############################################
 %apprun sysinfo
 ###############
@@ -130,41 +139,6 @@ fi
 
 base=`pwd`
 
-# Get the codes and any dependencies
-        rm -rf lammps
-        git clone https://github.com/lammps/lammps.git $base/lammps
-        cd $base/lammps
-        git checkout 0c287a55cd0be3103bc67be0d8f0688e1a6db345
-
-#Build your code 
-         
-        echo "Build LAMMPS binaries"
-    
-        cd $base/lammps/src/
-        make yes-asphere yes-class2 yes-kspace yes-manybody yes-misc yes-molecule
-        make yes-mpiio yes-opt yes-replica yes-rigid
-        make yes-user-omp yes-user-intel
-        export LMP_ROOT="../../../"
-        source /opt/intel/compilers_and_libraries_2018.3.222/linux/bin/compilervars.sh intel64
-        make intel_cpu_intelmpi -j
-        LMP_BIN="$base/lammps/src/lmp_intel_cpu_intelmpi" 
-
-        echo "Create data files"
-        BENCH_DIR="$(pwd -P)/workloads"
-        mkdir -p $BENCH_DIR 
-        cp -rf $LMP_BIN $BENCH_DIR
-        cp -rf ./USER-INTEL/TEST/in.* ./USER-INTEL/TEST/mW* $BENCH_DIR
-        cp -rf ../bench/Cu_u3.eam ../bench/data.rhodo $BENCH_DIR
-        cp -rf ../bench/POTENTIALS/Si.* $BENCH_DIR
-        cp -rf ../examples/airebo/data.airebo ../potentials/CH.airebo $BENCH_DIR
-
-        cd $BENCH_DIR 
-        files=`echo in.*`;
-        for file in $files
-        do 
-	       sed -i 's/\${root}.*\///g' $file
-        done
- 
 #Create a work directory inside the container
         WORKDIR="$SINGULARITY_ROOTFS/lammps"
         mkdir -p $WORKDIR
@@ -172,16 +146,11 @@ base=`pwd`
            echo "failed to create tempdir directory..."
            exit 1
        fi
-
-# Copy all the binaries and anything else needed to run your binaries
-        cp -rf $BENCH_DIR/* $WORKDIR
-        if [ "$(ls -A $WORKDIR)" ]; then
-           echo "Files are copies here $WORKDIR"
-        fi
-        
-        #wget https://raw.githubusercontent.com/intel/Intel-HPC-Container/master/sysinfo.sh -P $WORKDIR
-        STORAGE=/nfs/pdx/home/KNL_Benchmarking_Apps/containers-storage
-        cp $STORAGE/sysinfo.sh -P $WORKDIR
+       
+# Get binary and workload
+        wget https://github.com/intel/HPC-containers-from-Intel/raw/master/containers/lammps/binAndWorkloads.tar.gz
+        tar -xvf binAndWorkloads.tar.gz -C $WORKDIR --strip-components=1
+	wgethttps://raw.githubusercontent.com/intel/HPC-containers-from-Intel/master/sysinfo.sh -P $WORKDIR
         
         chmod -R 777 $WORKDIR
 
@@ -202,33 +171,8 @@ yum install -y hostname lscpu uptime redhat-lsb
 rpm --import https://yum.repos.intel.com/2018/setup/RPM-GPG-KEY-intel-psxe-runtime-2018
 rpm -Uhv https://yum.repos.intel.com/2018/setup/intel-psxe-runtime-2018-reposetup-1-0.noarch.rpm
 yum install intel-psxe-runtime -y
-yum install libhfil libpsm2 -y
+yum install libhfil libpsm2 -y # Needed if ran on system with OPA 
 yum install libnl -y
 
 #installing gcc
 yum install gcc -y
-
-cd /lammps
-source /opt/intel/psxe_runtime/linux/bin/psxevars.sh
-echo " generating the lc workload ..."
-mpiexec.hydra -np 20 ./lmp_intel_cpu_intelmpi  -in in.lc_generate_restart -log none -pk intel 0 -sf intel -screen none
-
-####################################################
-%help
-#####
-USAGE: 
-
-- Run from inside the container:
-     $ singularity shell <container-name.simg>
-     $ cd /$WORKDIR
-     $ source /opt/intel/psxe_runtime/linux/bin/psxevars.sh
-     $ $RunCommand
-
-- Run your own workload using the exec command (http://singularity.lbl.gov/docs-exec):
-     $ singularity exec <container-name.simg> $SINGULARITY_ROOTFS/$WORKDIR/$BIN <LocalPath>/$WORKLOAD arg arg ...
-
-- Run all the apps if they don't depend on each other:
-     $ for app in $(./<container-name.simg> apps)
-     $  do
-     $      ./<container-name> run $app
-     $ done
