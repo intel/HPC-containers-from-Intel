@@ -150,7 +150,7 @@ base=`pwd`
 # Get binary and workload
         wget https://github.com/intel/HPC-containers-from-Intel/raw/master/containers/lammps/binAndWorkloads.tar.gz
         tar -xvf binAndWorkloads.tar.gz -C $WORKDIR --strip-components=1
-	wgethttps://raw.githubusercontent.com/intel/HPC-containers-from-Intel/master/sysinfo.sh -P $WORKDIR
+	wget https://raw.githubusercontent.com/intel/HPC-containers-from-Intel/master/sysinfo.sh -P $WORKDIR
         
         chmod -R 777 $WORKDIR
 
