@@ -4,7 +4,10 @@ Large-scale Atomic/Molecular Massively Parallel Simulator (LAMMPS) is a classica
 
 LAMMPS runs on single processors or in parallel using message-passing techniques with a spatial-decomposition of the simulation domain. The code is designed to be easy to modify or extend with new functionality.
 
-Below are the details of how to get and run LAMMPS container for best performance on Intel® Xeon® family for single and cluster nodes.
+Below are the details of how to get and run LAMMPS container for best performance on Intel® Xeon® family for single and cluster nodes. We will cover:
+
+ - Running instructions for the provided container
+ - Build your own container
 
 ***
 > PS: Note that the following prerequisites must be fulfilled before running the container:
@@ -15,7 +18,7 @@ Below are the details of how to get and run LAMMPS container for best performanc
 
 See instructions [here](https://github.com/intel/Intel-HPC-Container/wiki/3.-Documentation-running-CSPs)
 
-# Running instructions:
+# Running instructions for the provided container:
 
 The LAMMPS container includes a binary optimized for AVX-512 and Intel MPI (lmp_intel_cpu_intelmpi) and example workloads included with LAMMPS for simulation of a simple atomic fluid (lj), a protein (rhodo), polyethelene (airebo), a coarse-grain liquid crystal (lc), dissipative particle dynamics (dpd), copper (eam), silicon (sw/tersoff), and coarse-grain water (water).
 
@@ -23,29 +26,33 @@ The LAMMPS container includes a binary optimized for AVX-512 and Intel MPI (lmp_
 
 You can pull the lammps container image form the Singularity hub as follow:
 
-	$ singularity pull shub://intel/Intel-HPC-Container:lammps
+	$ singularity pull --name lammps.simg shub://intel/HPC-containers-from-Intel:lammps
 
 OR you can build a writable image using the base:
 
-        $ sudo singularity build --writable lammps.img shub://intel/Intel-HPC-Container:lammps
+	$ sudo singularity build --writable lammps.img shub://intel/HPC-containers-from-Intel:lammps
 ***
 ## Run lammps on single node:
 
-1.  As an excutable:
+The container has a help section:
+
+	$ singularity help lammps.simg
 	
+1.  As an excutable:   
+
         $ singularity run --app lammps lammps.img $NUMCORES
 
 This will run the binary lmp_intel_cpu_intelmpi with all the workloads
 
 2.  With the [exec](http://singularity.lbl.gov/docs-exec) command (with your own workload):
 
- For example to run the polyethelene example:”  
-
-        $ source /opt/intel/psxe_runtime/linux/bin/compilervars.sh intel64
-        $ mpirun -np 40 singularity exec lammps.img /lammps/lmp_intel_cpu_intelmpi -in <LOCALDIR>/in.intel.airebo -log none -pk intel 0 omp 2 -sf intel -v m 0.2 -screen /tmp/in.intel.lj.log
+ For example to run the polyethelene example:
+ 
+	$ source /opt/intel/psxe_runtime/linux/bin/compilervars.sh intel64
+	$ mpirun -np 40 singularity exec lammps.img /lammps/lmp_intel_cpu_intelmpi -in <LOCALDIR>/in.intel.airebo -log none -pk intel 0 omp 2 -sf intel -v m 0.2 -screen /tmp/in.intel.lj.log
 	
 3.  From inside the container: 
-       
+
         $ singularity shell lammps.img
         $ cd /lammps
         $ source /opt/intel/psxe_runtime/linux/bin/compilervars.sh intel64
@@ -83,6 +90,23 @@ To run the container on multinode, you need to do the following:
 	# run lammps on 4  Intel® Xeon® Gold nodes
 	$ mpiexec.hydra -hostfile nodelist -ppn $PPN -np $NP singularity run --app multinode lammps.simg airebo
 
+***
+# Build your own container:
+
+You can use the  [lammps_recipe](https://github.com/intel/HPC-containers-from-Intel/blob/master/containers/lammps/lammps_recipe)  recipe on your local machine to: 
+  - Build LAMMPS binary and generate workloads for AVX512
+  - Create LAMMPS container
+
+Required prerequisites:
+ - Singularity
+ - ICC compiler 2018 version
+ - super user access to the system
+ 
+ Here is how to use:
+ 
+ 	$ sudo singularity build lammps.simg lammps_recipe
+ 
+ > Note, the lammps_recipe file may need some minor adjustment depends on the envirnment you will be building on.
 ***
 ### Recommended links:
 
