@@ -14,9 +14,7 @@ Below are the details of how to get and run LAMMPS container for best performanc
 
   - Intel® Xeon® family system or cluster. Cloud or bare metal 
 
-  - Singularity must be installed and operational
-
-See instructions [here](https://github.com/intel/Intel-HPC-Container/wiki/3.-Documentation-running-CSPs)
+  - [Singularity](http://singularity.lbl.gov/) must be installed and operational
 
 # Running instructions for the provided container:
 
@@ -70,7 +68,7 @@ To run the container on multinode, you need to do the following:
  * Get the lammps container
  * Source the compiler, mpi and mkl
  * Specify host names to run on in “hosts” file
- * Select a communication and Nextork fabric at runtime
+ * Select a communication and Network fabric at runtime
  
  Here is an example to run interactively on 4 node with 24 cores/socket/node setup on the cloud:
 
@@ -106,7 +104,7 @@ Required prerequisites:
  
  	$ sudo singularity build lammps.simg lammps_recipe
  
- > Note, the lammps_recipe file may need some minor adjustment depends on the envirnment you will be building on.
+ > Note, the lammps_recipe file may need some minor adjustment depends on the environment you will be building on.
 ***
 ### Recommended links:
 
