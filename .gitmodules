@@ -1,3 +1,0 @@
-[submodule "sources/centos-git-common"]
-	path = sources/centos-git-common
-	url = https://git.centos.org/r/centos-git-common.git
