@@ -31,31 +31,27 @@ OR you can build a writable image using the base:
 ***
 ## Run lammps on single node:
 
-1.  As an excutable::
+1.  As an excutable:
 	
-        $ ./lammps.img $NUMCORES
+        $ singularity run --app lammps lammps.img $NUMCORES
 
 This will run the binary lmp_intel_cpu_intelmpi with all the workloads
 
-2.  With the [exec](http://singularity.lbl.gov/docs-exec) command.
+2.  With the [exec](http://singularity.lbl.gov/docs-exec) command (with your own workload):
 
  For example to run the polyethelene example:”  
 
         $ source /opt/intel/psxe_runtime/linux/bin/compilervars.sh intel64
-        $ mpirun -np 40 singularity exec lammps.img /opt/intel/lammps/lmp_intel_cpu_intelmpi -in /opt/intel/lammps/in.intel.airebo -log none -pk intel 0 omp 2 -sf intel -v m 0.2 -screen /tmp/in.intel.lj.log
+        $ mpirun -np 40 singularity exec lammps.img /lammps/lmp_intel_cpu_intelmpi -in <LOCALDIR>/in.intel.airebo -log none -pk intel 0 omp 2 -sf intel -v m 0.2 -screen /tmp/in.intel.lj.log
 	
 3.  From inside the container: 
        
         $ singularity shell lammps.img
-        $ cd /opt/intel/lammps
+        $ cd /lammps
         $ source /opt/intel/psxe_runtime/linux/bin/compilervars.sh intel64
         $ mpirun -np 40 ./lmp_intel_cpu_intelmpi -in in.intel.airebo -log none -pk intel 0 omp 2 -sf intel -v m 0.2 -screen /tmp/in.intel.lj.log
 
 > PS. To run with your own workload, the container should have your home directory mounted or you can bind your preferred directory. [See here](https://singularity.lbl.gov/docs-mount). You can also run with the exec command. 
-
-Example to run with your own workload:
-
-    $ mpirun -np 40 singularity exec lammps.img /opt/intel/lammps/lmp_intel_cpu_intelmpi -in <LOCALDIR>/in.your_workload -log none -pk intel 0 omp 2 -sf intel -v m 0.2 -screen /tmp/in.your_workload.log
 
 ***
 
@@ -85,12 +81,12 @@ To run the container on multinode, you need to do the following:
 	$ export I_MPI_DEVICE=ssm          # Set TCP + shared memory (for SMP clusters connected via Ethernet)
 	
 	# run lammps on 4  Intel® Xeon® Gold nodes
-	$ mpirun -hostfile nodelist -ppn 48 -np 192 singularity exec lammps.img /opt/intel/lammps/lmp_intel_cpu_intelmpi -in /opt/intel/lammps/in.intel.airebo -log none -pk intel 0 omp 2 -sf intel -v m 0.2
+	$ mpiexec.hydra -hostfile nodelist -ppn $PPN -np $NP singularity run --app multinode lammps.simg airebo
 
 ***
 ### Recommended links:
 
-* [Lammps documentation on Intel platforms](http://lammps.sandia.gov/doc/accelerate_intel.html)
+* [Lammps documentation on Intel platforms](https://lammps.sandia.gov/doc/Speed_intel.html)
 * [Lammps recipe for Intel platforms](https://software.intel.com/en-us/articles/recipe-lammps-for-intel-xeon-phi-processors)
 
 
