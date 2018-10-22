@@ -79,9 +79,7 @@ To run the container on multinode, you need to do the following:
 	compute004
 	
 	source /opt/intel/psxe_runtime/linux/bin/compilervars.sh intel64
-	source /opt/intel/psxe_runtime/linux/mkl/bin/mklvars.sh
-	source /opt/intel/psxe_runtime/linux/mkl/bin/mklvars.sh intel64 
-	
+		
 	$ export I_MPI_FABRICS=shm:tcp     # Set the tcp fabric to be used for communication between nodes
 	$ export I_MPI_DEVICE=ssm          # Set TCP + shared memory (for SMP clusters connected via Ethernet)
 	
