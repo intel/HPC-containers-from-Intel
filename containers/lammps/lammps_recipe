@@ -33,7 +33,7 @@ EXAMPLES:
         $ mpiexec.hydra -hostfile nodelist -ppn $PPN -np $NP singularity run --app multinode lammps.simg airebo
 
   - Run multiple apps:
-        $ for app in sysinfo gromacs ; do singularity run --app $app <container-name.simg> ; done
+        $ for app in sysinfo lammps ; do singularity run --app $app <container-name.simg> ; done
 
 ##############################################
 %apprun sysinfo
