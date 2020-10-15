@@ -1,8 +1,10 @@
-﻿# Intel-Hpc-Containers
+ # Intel-Hpc-Containers
 
-# - LEGAL NOTICE: By downloading and using this build file (the “Software Package”) and the included software or software made available for download, you agree to the terms and conditions of the software license agreements for the Software Package, which may also include notices, disclaimers, or license terms for third party software (together, the “Agreements”) included in this README file.
-#
-# - This Singularity definition file will automatically download :
+
+- LEGAL NOTICE: By downloading and using this build file (the “Software Package”) and the included software or software made available for download, you agree to the terms and conditions of the software license agreements for the Software Package, which may also include notices, disclaimers, or license terms for third party software (together, the “Agreements”) included in this README file.
+
+- This Singularity definition file will automatically download :
+
  		* WRF
 			- Download Location: (http://www2.mmm.ucar.edu/wrf/src/WRFV3.9.1.1.TAR.gz)
 			- License: (https://raw.githubusercontent.com/wrf-model/WRF/master/LICENSE.txt)
@@ -51,14 +53,14 @@ o	The Singularity definition file will require these programs to be pre-installe
 
 Instructions to build a container:
 
-1.   Build the binaries and dependencies from this [recipe](link to the definition file) :
+1.   Build the binaries and dependencies from Build recipe :
 
      `$ sudo singularity build <ContainerName.simg> <nameBuild.def>`
 
 This will generate the binaries that you will need in step #3 and a dummy container <ContainerName.simg> that you can just use or ignore
 
 
-2.  Build the base container that includes the OS, Intel runtime libraries, and some independencies . Build it from this [recipe](link to the base container definition file) as:
+2.  Build the base container that includes the OS, Intel runtime libraries, and some independencies . Build it from Run recipe as:
 	
      `$ sudo singularity build /tmp/base.simg base`
 
