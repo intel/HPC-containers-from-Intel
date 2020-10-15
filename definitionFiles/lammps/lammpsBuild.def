@@ -1,0 +1,89 @@
+# Copyright (C) 2020 Intel Corporation
+
+Bootstrap: scratch
+
+#######################################
+%help
+########
+This container build the binaries and dependencies from source codes 
+
+##################################################
+%pre
+###########
+# Setup the proxies and env variables for building the code
+export http_proxy="http://proxy-us.intel.com:911"
+export https_proxy="http://proxy-us.intel.com:912"
+export ftp_proxy="http://proxy.jf.intel.com:911"
+
+version="2019.4.243"
+compiler="compilers_and_libraries_${version}"
+source /opt/intel/${compiler}/linux/bin/compilervars.sh intel64
+
+export base=`pwd`
+appinfo=${base}/appinfo
+touch ${appinfo}
+echo "****************appinfo of this container*************" >> ${appinfo}
+date >> ${appinfo}
+
+export BENCH_DIR="$base/lammps-avx512"
+
+echo "Get the codes and any dependencies"
+rm -rf $BENCH_DIR
+rm -rf lammps
+git clone -b stable_3Mar2020 https://github.com/lammps/lammps.git $base/lammps ; echo "stable_3Mar2020" >> ${appinfo}
+
+
+cd $base/lammps
+
+echo "Build the code"     
+cd $base/lammps/src/ ; cat version.h >> ${appinfo}
+make yes-asphere yes-class2 yes-kspace yes-manybody yes-misc yes-molecule
+make yes-mpiio yes-opt yes-replica yes-rigid
+make yes-user-omp yes-user-intel
+export LMP_ROOT="../../../"
+make intel_cpu_intelmpi -j
+LMP_BIN="${base}/lammps/src/lmp_intel_cpu_intelmpi" 
+
+echo "Create data files"
+mkdir -p $BENCH_DIR 
+cp -rf $LMP_BIN $BENCH_DIR
+cp -rf ./USER-INTEL/TEST/in.* ./USER-INTEL/TEST/mW* $BENCH_DIR
+cp -rf ../bench/Cu_u3.eam ../bench/data.rhodo $BENCH_DIR
+cp -rf ../bench/POTENTIALS/Si.* $BENCH_DIR
+cp -rf ../examples/airebo/data.airebo ../potentials/CH.airebo $BENCH_DIR
+
+
+cd $BENCH_DIR
+files=`echo in.*`;
+for file in $files
+  do 
+     sed -i 's/\${root}.*\///g' $file
+  done
+
+which icc >> ${appinfo}
+icc --version >> ${appinfo}
+mpirun --version >> ${appinfo}
+cp ${appinfo} $BENCH_DIR/
+cp $base/avx512/lammps.def $BENCH_DIR/
+
+cd $BENCH_DIR
+echo " generating the lc workload ..."
+mpirun -np 20 ./lmp_intel_cpu_intelmpi  -in in.lc_generate_restart -log lc.log -pk intel 0 -sf intel
+
+#################
+%setup
+#######
+NFS="/nfs/pdx/home/Containers/binaries"
+NAME="lammps"
+ARCH="avx512"
+KEY="ALL"
+APP="${NAME}-${ARCH}"
+
+tar cfv ${APP}.tar ${APP}
+chmod -R 777 *
+
+#cleanup
+cp -rf ${NAME} ${NFS}/${NAME}${KEY}
+cp -r ${APP}* ${NFS}/
+#rm -rf ${NAME}*
+

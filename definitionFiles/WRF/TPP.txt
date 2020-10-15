@@ -1,0 +1,291 @@
+“WRF container definition file” Third Party Programs File
+This file contains the list of third party software (“third party programs”) contained in the Intel software and their required notices and/or license terms. This third party software, even if included with the distribution of the Intel software, may be governed by separate license terms, including without limitation, third party license terms, other Intel software license terms, and open source software license terms. These separate license terms govern your use of the third party programs as set forth in the “third-party-programs.txt” or other similarly-named text file.
+
+Third party programs and their corresponding required notices and/or license terms are listed below.
+-------------------------------------------------------------
+1.	Singularity 3.5
+Copyright (c) 2015-2017, Gregory M. Kurtzer. All rights reserved.
+Copyright (c) 2016-2017, The Regents of the University of California. All right reserved.
+Copyright (c) 2017, SingularityWare, LLC. All rights reserved.
+Copyright (c) 2018-2019, Sylabs, Inc. All rights reserved.
+
+The 3-Clause BSD
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from this
+   software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+-------------------------------------------------------------
+-------------------------------------------------------------
+2.	Centos 
+CentOS Linux 7 EULA
+
+CentOS Linux 7 comes with no guarantees or warranties of any sorts,
+either written or implied.
+
+The Distribution is released as GPLv2. Individual packages in the
+distribution come with their own licences.
+
+---------------------------------------------------------------------------------------------------
+3.	Intel® Parallel Studio XE Runtime 2020
+
+Intel Simplified Software License (Version February 2020)
+Use and Redistribution. You may use and redistribute the software (the “Software”), without modification, provided the following conditions are met:
+•	Redistributions must reproduce the above copyright notice and the following terms of use in the Software and in the documentation and/or other materials provided with the distribution.
+•	Neither the name of Intel nor the names of its suppliers may be used to endorse or promote products derived from this Software without specific prior written permission.
+•	No reverse engineering, decompilation, or disassembly of this Software is permitted.
+Limited patent license. Intel grants you a world-wide, royalty-free, non-exclusive license under patents it now or hereafter owns or controls to make, have made, use, import, offer to sell and sell (“Utilize”) this Software, but solely to the extent that any such patent is necessary to Utilize the Software alone. The patent license shall not apply to any combinations which include this software. No hardware per se is licensed hereunder.
+Third party programs. The Software may contain Third Party Programs. “Third Party Programs” are third party software, open source software or other Intel software listed in the “third-party-programs.txt” or other similarly named text file that is included with the Software. Third Party Programs, even if included with the distribution of the Software, may be governed by separate license terms, including without limitation, third party license terms, open source software notices and terms, and/or other Intel software license terms. These separate license terms may govern your use of the Third Party Programs.
+DISCLAIMER. THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT ARE DISCLAIMED. THIS SOFTWARE IS NOT INTENDED FOR USE IN SYSTEMS OR APPLICATIONS WHERE FAILURE OF THE SOFTWARE MAY CAUSE PERSONAL INJURY OR DEATH AND YOU AGREE THAT YOU ARE FULLY RESPONSIBLE FOR ANY CLAIMS, COSTS, DAMAGES, EXPENSES, AND ATTORNEYS’ FEES ARISING OUT OF ANY SUCH USE, EVEN IF ANY CLAIM ALLEGES THAT INTEL WAS NEGLIGENT REGARDING THE DESIGN OR MANUFACTURE OF THE MATERIALS.
+LIMITATION OF LIABILITY. IN NO EVENT WILL INTEL BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. YOU AGREE TO INDEMNIFY AND HOLD INTEL HARMLESS AGAINST ANY CLAIMS AND EXPENSES RESULTING FROM YOUR USE OR UNAUTHORIZED USE OF THE SOFTWARE.
+No support. Intel may make changes to the Software, at any time without notice, and is not obligated to support, update or provide training for the Software.
+Termination. Intel may terminate your right to use the Software in the event of your breach of this Agreement and you fail to cure the breach within a reasonable period of time.
+Feedback. Should you provide Intel with comments, modifications, corrections, enhancements or other input (“Feedback”) related to the Software Intel will be free to use, disclose, reproduce, license or otherwise distribute or exploit the Feedback in its sole discretion without any obligations or restrictions of any kind, including without limitation, intellectual property rights or licensing obligations.
+Compliance with laws. You agree to comply with all relevant laws and regulations governing your use, transfer, import or export (or prohibition thereof) of the Software.
+Governing law. All disputes will be governed by the laws of the United States of America and the State of Delaware without reference to conflict of law principles and subject to the exclusive jurisdiction of the state or federal courts sitting in the State of Delaware, and each party agrees that it submits to the personal jurisdiction and venue of those courts and waives any objections. The United Nations Convention on Contracts for the International Sale of Goods (1980) is specifically excluded and will not apply to the Software.
+*Other names and brands may be claimed as the property of others.
+--------------------------------------------------------------------------------
+4.	CURL
+COPYRIGHT AND PERMISSION NOTICE
+
+Copyright (c) 1996 - 2020, Daniel Stenberg, daniel@haxx.se, and many contributors, see the THANKS file.
+
+All rights reserved.
+
+Permission to use, copy, modify, and distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Except as contained in this notice, the name of a copyright holder shall not be used in advertising or otherwise to promote the sale, use or other dealings in this Software without prior written authorization of the copyright holder.
+
+---------------------------------------------------------------------------------------------
+5.	ZLIB
+/* zlib.h -- interface of the 'zlib' general purpose compression library
+  version 1.2.11, January 15th, 2017
+
+  Copyright (C) 1995-2017 Jean-loup Gailly and Mark Adler
+
+  This software is provided 'as-is', without any express or implied
+  warranty.  In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+
+  Jean-loup Gailly        Mark Adler
+  jloup@gzip.org          madler@alumni.caltech.edu
+
+*/
+
+--------------------------------------------------------------------------
+6.	SZIP
+Szip Copyright and License Statement, as Distributed in the HDF Source Code
+
+Commercial use
+Commercial users may use the Szip software integrated with HDF to decode data and for internal activities that do not involve or result in the development of an Szip-based software product.
+To use this software to encode data or in the development of an Szip-based software product, a commercial user may have to acquire an appropriate license from the appropriate licensing agent. See the HDF/Szip collaborative agreement (PDF) for details.
+For clarification or further information regarding SZIP licensing, contact ICs, LLC, at: ics@ics-rhbd.com
+The SZIP Science Data Lossless Compression Program is Copyright (C) 2001 Science
+& Technology Corporation @ UNM.  All rights released.  Copyright (C) 2003 Lowell
+H. Miles and Jack A. Venbrux.  Licensed to ICs, LLC, for distribution by the
+University of Illinois' National Center for Supercomputing Applications as a
+part of the HDF data storage and retrieval file format and software library
+products package.  All rights reserved.  Do not modify or use for other
+purposes.
+
+SZIP implements an extended Rice adaptive lossless compression algorithm
+for sample data.  The primary algorithm was developed by R. F. Rice at
+Jet Propulsion Laboratory.  
+
+SZIP embodies certain inventions patented by the National Aeronautics &
+Space Administration.  United States Patent Nos. 5,448,642, 5,687,255,
+and 5,822,457 have been licensed to ICs, LLC, for distribution with the
+HDF data storage and retrieval file format and software library products.
+All rights reserved.
+
+Revocable, royalty-free, nonexclusive sublicense to use SZIP decompression
+software routines and underlying patents is hereby granted by ICs, LLC, to 
+all users of and in conjunction with HDF data storage and retrieval file 
+format and software library products.
+
+Revocable, royalty-free, nonexclusive sublicense to use SZIP compression
+software routines and underlying patents for non-commercial, scientific use
+only is hereby granted by ICs, LLC, to users of and in conjunction with HDF 
+data storage and retrieval file format and software library products.
+
+For commercial use license to SZIP compression software routines and underlying 
+patents please contact ICs, LLC, at: 
+
+        Joseph J. Feeley, Ph.D., P.E.
+        Chief Executive Officer
+        ICs, LLC
+        PO Box 2236
+        McCall, ID 83638
+
+        Email: ics@ics-rhbd.com
+
+------------------------------------------------------------------------------------
+7.	HDF5
+Copyright Notice and License Terms for 
+HDF5 (Hierarchical Data Format 5) Software Library and Utilities
+-----------------------------------------------------------------------------
+
+HDF5 (Hierarchical Data Format 5) Software Library and Utilities
+Copyright (c) 2006-2018, The HDF Group. 
+
+NCSA HDF5 (Hierarchical Data Format 5) Software Library and Utilities
+Copyright (c) 1998-2006, The Board of Trustees of the University of Illinois. 
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without 
+modification, are permitted for any purpose (including commercial purposes) 
+provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, 
+   this list of conditions, and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, 
+   this list of conditions, and the following disclaimer in the documentation 
+   and/or materials provided with the distribution.
+
+3. Neither the name of The HDF Group, the name of the University, nor the 
+   name of any Contributor may be used to endorse or promote products derived 
+   from this software without specific prior written permission from 
+   The HDF Group, the University, or the Contributor, respectively.
+
+DISCLAIMER: 
+THIS SOFTWARE IS PROVIDED BY THE HDF GROUP AND THE CONTRIBUTORS 
+"AS IS" WITH NO WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED. IN NO EVENT SHALL THE HDF GROUP OR THE CONTRIBUTORS BE LIABLE FOR ANY DAMAGES SUFFERED BY THE USERS ARISING OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+You are under no obligation whatsoever to provide any bug fixes, patches, or upgrades to the features, functionality or performance of the source code ("Enhancements") to anyone; however, if you choose to make your Enhancements available either publicly, or directly to The HDF Group, without imposing a separate written license agreement for such Enhancements, then you hereby grant the following license: a non-exclusive, royalty-free perpetual license to install, use, modify, prepare derivative works, incorporate into other computer software, distribute, and sublicense such enhancements or derivative works thereof, in binary and source code form.
+
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+
+Limited portions of HDF5 were developed by Lawrence Berkeley National 
+Laboratory (LBNL). LBNL's Copyright Notice and Licensing Terms can be
+found here: COPYING_LBNL_HDF5 file in this directory or at 
+http://support.hdfgroup.org/ftp/HDF5/releases/COPYING_LBNL_HDF5. 
+
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+
+Contributors:   National Center for Supercomputing Applications (NCSA) at 
+the University of Illinois, Fortner Software, Unidata Program Center (netCDF), The Independent JPEG Group (JPEG), Jean-loup Gailly and Mark Adler (gzip), and Digital Equipment Corporation (DEC).
+
+-----------------------------------------------------------------------------
+ 
+Portions of HDF5 were developed with support from the Lawrence Berkeley 
+National Laboratory (LBNL) and the United States Department of Energy 
+under Prime Contract No. DE-AC02-05CH11231.
+
+-----------------------------------------------------------------------------
+
+Portions of HDF5 were developed with support from the University of 
+California, Lawrence Livermore National Laboratory (UC LLNL).  
+The following statement applies to those portions of the product and must 
+be retained in any redistribution of source code, binaries, documentation, 
+and/or accompanying materials:
+
+   This work was partially produced at the University of California, 
+   Lawrence Livermore National Laboratory (UC LLNL) under contract 
+   no. W-7405-ENG-48 (Contract 48) between the U.S. Department of Energy 
+   (DOE) and The Regents of the University of California (University) 
+   for the operation of UC LLNL.
+
+   DISCLAIMER: 
+   This work was prepared as an account of work sponsored by an agency of 
+   the United States Government. Neither the United States Government nor 
+   the University of California nor any of their employees, makes any 
+   warranty, express or implied, or assumes any liability or responsibility 
+   for the accuracy, completeness, or usefulness of any information, 
+   apparatus, product, or process disclosed, or represents that its use 
+   would not infringe privately- owned rights. Reference herein to any 
+   specific commercial products, process, or service by trade name, 
+   trademark, manufacturer, or otherwise, does not necessarily constitute 
+   or imply its endorsement, recommendation, or favoring by the United 
+   States Government or the University of California. The views and 
+   opinions of authors expressed herein do not necessarily state or reflect 
+   those of the United States Government or the University of California, 
+   and shall not be used for advertising or product endorsement purposes.
+
+-----------------------------------------------------------------------------
+
+HDF5 is available with the SZIP compression library but SZIP is not part 
+of HDF5 and has separate copyright and license terms. See SZIP Compression 
+in HDF Products (www.hdfgroup.org/doc_resource/SZIP/) for further details.
+
+-----------------------------------------------------------------------------
+8.	NetCDF-C
+
+Copyright 2018 Unidata
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+----------------------------------------------------------------------------------
+9.	NetCDF-Fortran
+
+! License (and other Lawyer Language)
+ 
+! This software is released under the Apache 2.0 Open Source License. The
+! full text of the License can be viewed at :
+!
+!   http:www.apache.org/licenses/LICENSE-2.0.html
+!
+! The author grants to the University Corporation for Atmospheric Research
+! (UCAR), Boulder, CO, USA the right to revise and extend the software
+! without restriction. However, the author retains all copyrights and
+! intellectual property rights explicitly stated in or implied by the
+! Apache license
+
+--------------------------------------------------------
+10.	WRF (Weather Research and Forecasting model)
+WRF was developed at the National Center for Atmospheric Research (NCAR) which is operated by the University Corporation for Atmospheric Research (UCAR). NCAR and UCAR make no proprietary claims, either statutory or otherwise, to this version and release of WRF and consider WRF to be in the public domain for use by any person or entity for any purpose without any fee or charge. UCAR requests that any WRF user include this notice on any partial or full copies of WRF. WRF is provided on an "AS IS" basis and any warranties, either express or implied, including but not limited to implied warranties of non-infringement, originality, merchantability and fitness for a particular purpose, are disclaimed. In no event shall UCAR be liable for any damages, whatsoever, whether direct, indirect, consequential or special, that arise out of or in connection with the access, use or performance of WRF, including infringement actions.
+
+WRF® is a registered trademark of the University Corporation for Atmospheric Research (UCAR).
+--------------------------------------------------------------------------------
+
+The following third party programs have their own third party programs. These
+additional third party program files are as follows:
+
+1. Intel(R) Parallel Studio XE <install directory>/parallel_studio_xe_<version>.<package number>/licensingthird-party-programs.txt
+2. Intel(R) Math Kernel Library (Intel(R) MKL) <install directory>/compilers_and_libraries_2020.1.<package number>/licensing/en/third-party-programs.txt

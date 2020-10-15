@@ -1,0 +1,109 @@
+# Copyright (C) 2020 Intel Corporation
+# Legal Notice: See README file for licensing and other important information before using this file.
+
+Bootstrap: scratch
+
+####################################################################################
+%help
+#####
+This container build the binaries and dependencies from source codes
+
+#################################################################################
+%pre
+#####
+
+version="2020.1.217"
+compiler="compilers_and_libraries_${version}"
+source /opt/intel/${compiler}/linux/bin/compilervars.sh intel64
+source /opt/intel/${compiler}/linux/mpi/intel64/bin/mpivars.sh
+base=`pwd`
+appinfo=$base/appinfo
+touch ${appinfo}
+date >> ${appinfo}
+
+APP="namd-avx512"
+APOA1="$base/apoa1"
+STMV="$base/stmv"
+
+echo " Cleanup"
+cd $base
+rm -rf charm* tcl* apoa* stmv*
+mkdir apoa1 stmv
+
+echo "Get libraries"
+wget http://www.ks.uiuc.edu/Research/namd/utilities/apoa1.tar.gz
+wget http://www.ks.uiuc.edu/Research/namd/utilities/stmv.tar.gz
+
+tar -xvf apoa*.gz -C $APOA1 --strip-components=1
+tar -xvf stmv*.gz -C $STMV --strip-components=1
+
+chmod -R 777 apoa1 stmv
+#Fix and modify workload values
+sed -i -e '/numsteps/s/500/1000/' $APOA1/apoa1.namd 
+sed -i -e "/outputtiming/a\\outputenergies   600" $APOA1/apoa1.namd
+sed -i -e '/numsteps/s/500/1000/' $STMV/stmv.namd
+sed -i -e '/outputEnergies/s/20/600/' $STMV/stmv.namd
+sed -i 's/;//g' $STMV/stmv.namd 
+
+cd $base
+rm -rf namd
+git clone https://charm.cs.illinois.edu/gerrit/namd.git -b release-2-14-beta-1 --depth 1 namd 
+cd namd
+git pull "https://charm.cs.illinois.edu/gerrit/namd" refs/changes/64/5464/2   ; echo "namd version: release-2-14-beta-1" >>${appinfo}
+git clone https://github.com/UIUC-PPL/charm.git -b v6.10.1 --depth 1 ; echo "charm++ version: v6.10.1 " >>${appinfo}
+git clone https://github.com/tcltk/tcl.git -b core-8-5-branch --depth 1  ; echo "tcl version: core-8-5-branch" >>${appinfo}
+
+echo "build tcl"
+export NAMD_TCL_BASE="`pwd`/tcl"
+cd tcl/unix
+./configure --disable-shared --prefix=$NAMD_TCL_BASE
+make install -j
+
+echo "build charm++ for single node"
+cd $base/namd/charm
+export CC=icc; export CXX=icpc; export F90=ifort; export F77=ifort
+./build charm++ multicore-linux64 iccstatic -j36 --with-production "-O3 -ip -g -xCORE-AVX512 -qopt-zmm-usage=high"  2>&1 | tee buildSinglenode.log
+
+echo "Build namd for singlenode"
+cd $base/namd
+./config Linux-AVX512 --charm-base $base/namd/charm --with-mkl --charm-opts --tcl-prefix=$NAMD_TCL_BASE
+cd Linux-AVX512
+make clean
+make -j 2>&1 | tee make.log
+
+
+echo "build charm for multi-node"
+cd $base/namd/charm
+export MPICXX=mpiicpc
+export MPI_CXX=mpiicpc
+I_MPI_CC=icc;I_MPI_CXX=icpc;I_MPI_F90=ifort;I_MPI_F77=ifort
+export I_MPI_CC I_MPI_CXX I_MPI_F90 I_MPI_F7
+./build charm++ mpi-linux-x86_64 smp mpicxx -j36 --with-production "-O3 -ip -xCORE-AVX512" -DCMK_OPTIMIZE -DMPICH_IGNORE_CXX_SEEK 2>&1 | tee buildMultinode.log
+
+echo "Build namd for multi-node with mpi"
+I_MPI_CC=icc; I_MPI_CXX=icpc; I_MPI_F90=ifort; I_MPI_F77=ifort
+CC=icc; CXX=icpc; F90=ifort; F77=ifort
+export CC CXX F90 F77
+export I_MPI_LINK=opt_mt
+export I_MPI_CC I_MPI_CXX I_MPI_F90 I_MPI_F77
+cd $base/namd
+./config Linux-AVX512MPI --charm-base $base/namd/charm --with-mkl --charm-opts --tcl-prefix=$NAMD_TCL_BASE 
+cd Linux-AVX512MPI
+make clean
+make -j 2>&1 | tee makeMultinode.log
+
+which icc >> ${appinfo}
+icc --version >> ${appinfo}
+mpirun --version >> ${appinfo}
+
+cd $base
+mkdir -p $APP
+cp -rf $base/namd/Linux-AVX512/namd2 $APP/
+cp -rf $base/namd/Linux-AVX512MPI/namd2 $APP/namd2_mpi
+cp -rf $APOA1 $APP/
+cp -rf $STMV $APP/  
+cp -rf $base/avx512/namd.def $base/namd/
+cp -rf ${appinfo} $base/$APP/
+ 
+chmod -R 777 $APP/*
+exit 0

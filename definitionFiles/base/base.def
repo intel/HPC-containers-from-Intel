@@ -1,0 +1,57 @@
+# Copyright (C) 2020 Intel Corporation
+# This software ("Software"), when executed, will install programs (â"Programs") that are governed by separate license terms, including without limitation, third party license terms, other Intel software license terms, and open source software license terms. Such separate license terms solely govern your use of the Programs. A list of the license terms for the Programs can be found in the third-party-programs.txt file included with the distribution of the Software."
+
+#BootStrap: yum
+#OSVersion: 7.8.2003
+#MirrorURL: http://linux-ftp.jf.intel.com/pub/mirrors/centos/%{OSVERSION}/os/$basearch/
+#MirrorURL: http://mirror.centos.org/centos-%{OSVERSION}/%{OSVERSION}/os/$basearch/
+
+#Include: yum
+
+Bootstrap: docker
+From: centos:7
+
+#######################################
+%help
+ This container contains the base image (OS, Intel runtime libraries, Interconnect libs...)
+
+####################################################
+%post
+#####
+# proxy settings
+#export http_proxy="http://proxy-us.intel.com:911"
+#export https_proxy="http://proxy-us.intel.com:912"
+
+yum install -y sudo git wget vi which tree
+yum install -y hostname lscpu uptime redhat-lsb numactl
+
+rpm --import https://yum.repos.intel.com/2020/setup/RPM-GPG-KEY-intel-psxe-runtime-2020
+rpm -Uhv https://yum.repos.intel.com/2020/setup/intel-psxe-runtime-2020-reposetup-1-0.noarch.rpm
+
+yum --showduplicates list intel-psxe-runtime
+yum install -y intel-psxe-runtime
+
+#Install needed dependences
+yum install -y epel-release centos-release-scl && yum -y update && yum clean all
+yum group install -y "Development Tools" && yum clean all
+yum install -y devtoolset-8-gcc* && yum clean all
+
+ln -s /opt/intel/psxe_runtime/linux/ /mnt/
+
+######################
+%environment
+#####################
+export PATH=/opt/rh/devtoolset-8/root/bin:$PATH
+export LD_LIBRARY_PATH=/opt/rh/devtoolset-8/root/lib64:$LD_LIBRARY_PATH
+
+source  /opt/intel/psxe_runtime/linux/bin/compilervars.sh intel64
+source /opt/intel/psxe_runtime/linux/tbb/bin/tbbvars.sh intel64
+source /opt/intel/psxe_runtime/linux/mkl/bin/mklvars.sh intel64
+source /opt/intel/psxe_runtime/linux/mpi/intel64/bin/mpivars.sh
+
+#####################
+%runscript
+which mpirun
+gcc --version
+
+exec "$@"

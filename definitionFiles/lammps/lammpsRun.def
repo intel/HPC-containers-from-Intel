@@ -1,0 +1,246 @@
+# Copyright (C) 2020 Intel Corporation
+
+Bootstrap: localimage
+From: /tmp/base.simg
+
+#######################################
+%help
+########
+another example
+EXAMPLES:
+  - Available apps:
+        $ singularity apps <container-name.simg>  
+            lammps
+            multinode
+	    multinodeResults
+            sysinfo
+	    appinfo
+            clean
+        
+  - Example to run on singlenode:
+	$ singularity run --writable-tmpfs --app lammps <container-name.simg> <NUMCORES> <OMP_NUM_THREADS>
+
+ -  Example to run using the host's runtime libraries
+        $ export SINGULARITY_BINDPATH="/opt/intel/compilers_and_libraries_2019.4.243:/opt/intel/compilers_and_libraries_2019.4.243,/opt/intel/compilers_and_libraries_2019.4.243:/mnt"
+	$ singularity run --writable-tmpfs --app lammps <container-name.simg> <NUMCORES> <OMP_NUM_THREADS>
+
+  - Cluster run with the workload from the container (airebo, dpd, eam, lc, lj, water, rhodo, sw):
+	$ mpiexec.hydra -hostfile nodelist -ppn $PPN -np $NP singularity run --app multinode lammps.simg $workloadname $OMP_NUM_THREADS 
+        
+    Example to run the polyethelene(airebo) workload on a SKL:
+	$ mpirun -f hostfile -ppn 40 -np 160 singularity run --app multinode $containers/avx/lammps.simg airebo 2
+
+  - Run multiple apps:
+        $ for app in sysinfo lammps ; do singularity run --app $app <container-name.simg> ; done
+
+  - Run with the exec command:
+	$ singularity exec lammps.simg /lammps-avx512/lmp_intel_cpu_intelmpi -in /lammps-avx512/in.intel.lj -log lj.log -pk intel 0 omp 2 -sf intel -v m 0.2 -screen none
+
+  - To parse the results :
+        $ singularity run --app  multinodeResults <$container>
+
+
+- To write results to your directory of choice, set the CUSTOM_RESULTS_DIR variable at runtime as:
+        $ SINGULARITYENV_CUSTOM_RESULTS_DIR=/tmp/candy singularity run --app $APPNAME container.simg
+                OR
+        $ export SINGULARITYENV_CUSTOM_RESULTS_DIR=/tmp/candy
+        $ singularity run ....
+
+###############################################
+%environment
+#############
+now=`date '+%Y_%m_%d'`
+hostname=`hostname`
+
+APPNAME="lammps"
+OUTPUT_DIR=${HOME}/${APPNAME}
+LOG="${hostname}_${APPNAME}_${now}"
+RESULTS="${hostname}_${APPNAME}_${now}.results"
+CSV="${hostname}_${APPNAME}_${now}.csv"
+SYSCONFIG="${hostname}_${APPNAME}_${now}.sysconfig"
+APPINFO="${hostname}_${APPNAME}_${now}.appinfo"
+
+if [ -n "$CUSTOM_RESULTS_DIR" ]; then
+    RESULTS_DIR=$CUSTOM_RESULTS_DIR
+else
+    RESULTS_DIR=$OUTPUT_DIR
+fi
+
+WORKDIR="$SINGULARITY_ROOTFS/WORKSPACE"
+
+#ARCH=$1
+#if [ -z "$ARCH" ] ; then
+#        echo "You are missing an argument ! Try again"
+#       exit
+#fi
+
+ARCH="avx512"
+export APPNAME OUTPUT_DIR LOG RESULTS CSV SYSCONFIG APPINFO WORKDIR now hostname RESULTS_DIR ARCH
+export  I_MPI_SHM_LMT
+
+########################################
+%apprun lammps
+###############
+which mpirun
+echo $ARCH
+RESULTS_DIR="${RESULTS_DIR}-${ARCH}"
+
+if [ ! -x "${RESULTS_DIR}" ]; then
+  mkdir -p ${RESULTS_DIR}
+fi
+
+NUMCORES=$1
+OMP_NUM_THREADS=$2
+echo "args: $#"
+
+nproc=`nproc`
+sockets=`lscpu | grep Socket |awk '{print $2}'`
+ncores=`lscpu | grep Core | awk '{print $4}'`
+
+if [ -z "$NUMCORES" ] && [ -z "$OMP_NUM_THREADS" ]; then
+        OMP_NUM_THREADS=`lscpu | grep Thread |awk '{print $4}'`
+        NUMCORES=$((ncores * sockets))
+	echo "You didn't specify OMP_NUM_THREADS or number of cores. So running with $NUMCORES cores and OMP_NUM_THREADS = $OMP_NUM_THREADS"
+    echo " Next time, you can run us: $ singularity run --app lammps <container-name.simg> <NUMCORES> <OMP_NUM_THREADS>"
+fi
+
+WORKDIR=$WORKDIR/$APPNAME-$ARCH
+cd $WORKDIR
+pwd
+
+files=`echo in.intel.*`
+echo "OMP_NUM_THREADS=$OMP_NUM_THREADS"
+echo "NUMCORES=$NUMCORES"
+echo "mpiexec.hydra -np $NUMCORES ./lmp_intel_cpu_intelmpi -in <WORKLOAD> -log none -pk intel 0 omp $OMP_NUM_THREADS -sf intel -v m 1 -screen"
+
+export OMP_NUM_THREADS=$OMP_NUM_THREADS
+
+for file in $files
+do
+  name=`echo $file | sed 's/in\.intel\.//g'`
+  log="${RESULTS_DIR}/${LOG}_${name}"
+  echo -n "Running: $name " |tee -a $DIR/$RESULTS
+  mpiexec.hydra -np $NUMCORES ./lmp_intel_cpu_intelmpi -in $file -log none -pk intel 0 omp $OMP_NUM_THREADS -sf intel -v m 1 -screen $log
+  printf "${name} " >> $RESULTS_DIR/$RESULTS; grep 'Perform' $log | awk 'BEGIN{n=1}n%2==0{c=NF-1; print "Performance-:",$c,"timesteps/sec"}{n++}' |tee -a $RESULTS_DIR/$RESULTS
+done
+
+awk 'BEGIN{print "WORKLOAD,FOM,UNIT"}{print $1","$3","$4}' $RESULTS_DIR/$RESULTS >> $RESULTS_DIR/$CSV
+
+echo "Output file $RESULTS and all the logs for each workload $LOG ... are located at $RESULTS_DIR"
+##############################################
+%apprun multinode
+########################
+which mpirun
+
+WORKDIR=$WORKDIR/$APPNAME-$ARCH
+cd $WORKDIR
+RESULTS_DIR="${RESULTS_DIR}-${ARCH}"
+
+if [ ! -x "${RESULTS_DIR}" ]; then
+  mkdir -p ${RESULTS_DIR}
+fi
+
+WORKLOAD=$1
+OMP_NUM_THREADS=$2
+
+if [ -z "$WORKLOAD" ] && [ -z "$OMP_NUM_THREADS" ]; then
+    OMP_NUM_THREADS=2
+    echo "You didn't specify OMP_NUM_THREADS. So running with OMP_NUM_THREADS = $OMP_NUM_THREADS"
+    echo " You didn't specify a workload. Please try again!
+    Run: singularity help $containerName.simg for runing instructions."
+    exit 1
+fi
+
+file="in.intel.$WORKLOAD"
+name=`echo $file | sed 's/in\.intel\.//g'`
+log="${RESULTS_DIR}/${name}_multinode_${now}"
+
+echo -n ".. " 
+./lmp_intel_cpu_intelmpi -in $file -v x 4 -v y 2 -v z 2 -pk intel 0 omp $OMP_NUM_THREADS -sf intel -screen $log
+
+##############################################
+%apprun multinodeResults
+########################
+ARCH="avx512"
+
+RESULTS_DIR="${RESULTS_DIR}-${ARCH}"
+CSV="multinode-$CSV"
+WORKDIR=$WORKDIR/$APPNAME-$ARCH
+cd $WORKDIR
+
+files=`echo in.intel.*`
+
+for file in $files
+do
+  name=`echo $file | sed 's/in\.intel\.//g'`
+  log="${RESULTS_DIR}/${name}_multinode_${now}"
+  printf "${name} " |tee -a $RESULTS_DIR/$RESULTS; grep 'Perform' $log | awk 'BEGIN{n=1}n%2==0{c=NF-1; print "- Performance",$c,"timesteps/sec"}{n++}' |tee -a $RESULTS_DIR/$RESULTS
+  echo "" |tee -a $RESULTS_DIR/$RESULTS
+done
+
+awk 'BEGIN{print "WORKLOAD,FOM,UNIT"}{print $1","$3","$4}' $RESULTS_DIR/$RESULTS >> $RESULTS_DIR/$CSV
+
+echo "FOM for is in ns/days. Higher is better. Choose the highest value for each workload accross all the runs."
+
+##################################################
+%setup
+###########
+# Setup the proxies and env variables for building the code
+export http_proxy="http://proxy-us.intel.com:911"
+export https_proxy="http://proxy-us.intel.com:912"
+export ftp_proxy=http://proxy.jf.intel.com:911
+
+export WORKDIR="$SINGULARITY_ROOTFS/WORKSPACE"
+mkdir -p $WORKDIR
+
+APP="lammps"
+ARCH="avx512"
+BIN="/nfs/pdx/home/Containers/binaries/$APP-${ARCH}"
+
+# Copy all the binaries and anything else needed to run your binaries
+cp -r $BIN $WORKDIR/ 
+cp sysinfo.sh -P $WORKDIR/
+cp appinfo/${APP}* -P $WORKDIR/
+
+chmod -R 777 $WORKDIR/*
+
+exit 0
+
+#############################################
+%apprun sysinfo
+###############
+echo "Getting system configuration"
+cd $WORKDIR
+RESULTS_DIR="${RESULTS_DIR}-${ARCH}"
+./sysinfo.sh > $RESULTS_DIR/$SYSCONFIG
+
+echo "The $SYSCONFIG is located at $RESULTS_DIR"
+
+################################
+%apprun appinfo
+###############
+cd $WORKDIR
+RESULTS_DIR="${RESULTS_DIR}-${ARCH}"
+APP="lammps"
+cat ${APP} |tee $RESULTS_DIR/$APPINFO
+echo "Run command: mpiexec.hydra -np $NUMCORES ./lmp_intel_cpu_intelmpi -in $file -log none -pk intel 0 omp $OMP_NUM_THREADS -sf intel -v m 1" |tee -a $RESULTS_DIR/$APPINFO
+
+cd $APP-$ARCH
+cat appinfo |tee -a $RESULTS_DIR/$APPINFO
+
+#################################
+%apprun clean
+#############
+echo "deleting files $LOG $SYSCONFIG from $RESULTS_DIR"
+RESULTS_DIR="${RESULTS_DIR}-${ARCH}"
+rm -rf $RESULTS_DIR
+
+#################
+%apprun metadata
+#################
+echo "AUTHOR/Maintainer: smahane.douyeb@intel.com"
+echo "Maintainer: tim.mefford@intel.com"
+VERSION="version"
+echo "GitlabVersion : $VERSION"
+echo " "
+cat /.singularity.d/labels.json

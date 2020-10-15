@@ -1,0 +1,94 @@
+﻿# Copyright (C) 2020 Intel Corporation
+# Legal Notice: See README file for licensing and other important information before using this file.
+
+Bootstrap: scratch
+
+####################################################################################
+%help
+######
+This container build the binaries and dependencies from source codes
+
+#################################################################################
+%pre
+#######
+# source your compiler here like:
+
+version="2019.4.243"
+compiler="compilers_and_libraries_${version}"
+source /opt/intel/${compiler}/linux/bin/compilervars.sh intel64
+source /opt/intel/${compiler}/linux/mpi/intel64/bin/mpivars.sh
+
+export PATH=/opt/intel/cmake/bin:$PATH
+export base=`pwd`
+export WORKDIR="$SINGULARITY_ROOTFS/gromacs"
+
+##################################################################
+%pre 
+################################
+cd $base
+echo "Get the codes and any dependencies"
+
+rm -rf gromacs
+wget http://ftp.gromacs.org/pub/gromacs/gromacs-2019.tar.gz
+
+mkdir $base/gromacs
+tar -xvf gromacs-*.gz --strip-components=1 -C $base/gromacs
+echo "Build the code "
+installDir=$base/gromacs/installDir
+mkdir $installDir
+cd $base/gromacs/src
+
+echo "apply a work around due to a bug in the compiler"
+sed -i -e '469 i #ifdef __INTEL_COMPILER  //Bug in (at least) 19u1 and 18u5 (03424712)' $base/gromacs/src/gromacs/simd/tests/simd_floatingpoint_util.cpp
+sed -i -e '470 i #pragma novector' $base/gromacs/src/gromacs/simd/tests/simd_floatingpoint_util.cpp
+sed -i -e '471 i #endif' $base/gromacs/src/gromacs/simd/tests/simd_floatingpoint_util.cpp
+
+FLAGS="-xCORE-AVX512"; CFLAGS=$FLAGS CXXFLAGS=$FLAGS CC=mpiicc CXX=mpiicpc cmake .. -DBUILD_SHARED_LIBS=OFF -DGMX_FFT_LIBRARY=mkl -DCMAKE_INSTALL_PREFIX=$installDir -DGMX_MPI=ON -DGMX_OPENMP=ON -DGMX_CYCLE_SUBCOUNTERS=ON -DGMX_GPU=OFF -DGMX_BUILD_HELP=OFF -DGMX_HWLOC=OFF -DGMX_SIMD=AVX_512 -DGMX_OPENMP_MAX_THREADS=256
+make -j`nproc`
+make check
+make install
+
+# copy binaries to NFS
+if [ ! -x "$base/gromacs" ]; then
+  echo "Can't copy. Gromacs doeas't exist in the current directory"
+  exit 1
+fi
+
+##########################################################################################
+%pre
+################################
+echo " build workloads"
+cd $base
+rm -rf workloads
+mkdir $base/workloads
+cd $base/workloads
+wget ftp://ftp.gromacs.org/pub/benchmarks/water_GMX50_bare.tar.gz
+tar -xvf water*.tar.gz
+cd water-cut1.0_GMX50_bare/1536/
+$base/gromacs/src/bin/gmx_mpi grompp -f rf.mdp -c conf.gro -p topol.top -o topol_rf.tpr
+$base/gromacs/src/bin/gmx_mpi grompp -f pme.mdp -c conf.gro -p topol.top -o topol_pme.tpr
+
+cd $base/workloads
+# To get the Ion_channel_pme workload
+wget https://repository.prace-ri.eu/ueabs/GROMACS/1.2/GROMACS_TestCaseA.tar.gz
+tar -xvf GROMACS_TestCaseA.tar.gz 
+
+# To get the Lignocellulose_rf workload
+wget https://repository.prace-ri.eu/ueabs/GROMACS/1.2/GROMACS_TestCaseB.tar.gz
+tar -xvf GROMACS_TestCaseB.tar.gz 
+
+########################
+%setup
+##############
+#copy the binaries and workloads into a common folder
+cd $base
+APP="gromacs-avx512"
+mkdir -p $APP
+WORKLOADS="$APP/workloads"
+mkdir -p $WORKLOADS
+cp -rf $base/gromacs/src/bin/gmx_mpi $APP
+cp -rf $base/workloads/water-cut1.0_GMX50_bare/1536/topol_pme.tpr $WORKLOADS/
+cp -rf $base/workloads/water-cut1.0_GMX50_bare/1536/topol_rf.tpr $WORKLOADS/
+cp -rf $base/workloads/ion_channel.tpr $WORKLOADS/
+cp -rf $base/workloads/lignocellulose-rf.tpr $WORKLOADS/
+chmod -R 777 $APP

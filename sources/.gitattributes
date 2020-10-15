@@ -1,2 +1,0 @@
-lammps.tar.gz filter=lfs diff=lfs merge=lfs -text
-centos-git-common.tar.gz filter=lfs diff=lfs merge=lfs -text

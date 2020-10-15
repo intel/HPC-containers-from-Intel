@@ -1,0 +1,280 @@
+﻿# Copyright (C) 2020 Intel Corporation
+# Legal Notice: See README file for licensing and other important information before using this file.
+
+Bootstrap: localimage
+From: /tmp/base.simg
+
+################################
+%help
+################################
+WRF benchmark files are not part of the container for WRF because they are too large. You must download them by :
+    wget http://www2.mmm.ucar.edu/wrf/bench/conus12km_v3911/bench_12km.tar.bz2
+    wget http://www2.mmm.ucar.edu/wrf/bench/conus2.5km_v3911/bench_2.5km.tar.bz2
+    The container's runscript only runs the 2.5km benchmark. To run other benchmarks, you must run from inside the container
+##### 
+ USAGE: 
+
+After the container run is completed, the output files will be located at the $HOME/$APPNAME/$DATE"
+
+ - Available apps:
+        $ singularity apps <container-name.simg>  
+            singlenode 
+            multinode
+	    multinodeResults
+            sysinfo
+	    appinfo
+            clean
+ 
+ - Run on single node:
+      $ singularity run -B <$BENCH_DIR>:/benchmark --app singlenode wrf.simg
+	or if you want to specify the arguments: 
+      $ singularity run -B <$BENCH_DIR>:/benchmark --writable-tmpfs --app singlenode wrf.simg $OMP_NUM_THREADS $NUMCORES $WRF_NUM_TILES
+
+   Example to run on a 40 cores SKL system:
+      untar the bench_2.5km.tar.bz2 and mount it to the /benchmark dir inside the container:
+      $ singularity run -B bench_2.5km:/benchmark --writable-tmpfs --app singlenode wrf.simg
+      $ singularity run -B bench_2.5km:/benchmark --writable-tmpfs --app singlenode wrf.simg 1 40 1 80
+
+   Example to run from inside the container: 
+      $ singularity shell -B bench_2.5km:/benchmark --writable-tmpfs --app singlenode wrf.simg 
+      $ cd $WORKDIR/WRFV3/run 
+      $ ln -s /benchmark/wrfbdy_d01 wrfbdy_d01
+      $ ln -s /benchmark/wrfrst_$xxx.. wrfrst_$xxx...
+      $ ln -s /benchmark/namelist.input namelist.input
+      $ mpirun -genvall -n 40 ./wrf.exe |tee $log
+      $ cd $WORKDIR/scripts
+      $ cp /tmp/rsl.error.0000 .
+      $	./postproc.sh rsl.error.0000 |tee -a <resultsfilename> # to parse the results
+
+- Multinode node run as:
+        $ singularity run-help --app multinode <container-name.simg>
+
+- Parse the results for multinode run:
+	$ singularity run --app multinodeResults <container-name.simg>
+
+- To write results to your directory of choice (default is $HOME), set the CUSTOM_RESULTS_DIR variable at runtime as:
+        $ SINGULARITYENV_CUSTOM_RESULTS_DIR=/tmp/candy singularity run --app $APPNAME container.simg
+                OR
+        $ export SINGULARITYENV_CUSTOM_RESULTS_DIR=/tmp/candy
+        $ singularity run .... 
+################################
+%environment
+################################
+now=`date '+%Y_%m_%d'`
+hostname=`hostname`
+
+APPNAME="wrf"
+RESULTS_DIR=${HOME}/${APPNAME}
+LOG="${APPNAME}.log"
+RESULTS="${APPNAME}.results"
+CSV="${APPNAME}.csv"
+SYSCONFIG="${hostname}_${APPNAME}.sysconfig"
+APPINFO="${hostname}_${APPNAME}.appinfo"
+
+WORKDIR=$SINGULARITY_ROOTFS/WORKSPACE
+
+export APPNAME LOG RESULTS CSV SYSCONFIG WORKDIR now hostname RESULTS_DIR APPINFO
+
+export IO_LIBS=${WORKDIR}/io_libs
+export LD_LIBRARY_PATH=${IO_LIBS}/lib:${LD_LIBRARY_PATH}
+
+export WRFIO_NCD_LARGE_FILE_SUPPORT=1
+ulimit -s unlimited
+export I_MPI_DEBUG=5
+export KMP_STACKSIZE=512M
+
+###############################
+%apprun singlenode
+################################
+if [ ! -x "$RESULTS_DIR" ]; then
+    mkdir -p "$RESULTS_DIR"
+fi
+
+cd $WORKDIR/WRFV3/run
+
+OMP_NUM_THREADS=$1
+NUMCORES=$2
+WRF_NUM_TILES=$3
+
+sockets=`lscpu | grep Socket |awk '{print $2}'`
+ncores=`lscpu | grep Core | awk '{print $4}'`
+nthreads=`lscpu | grep Thread | awk '{print $4}'`
+
+if [ -z "$OMP_NUM_THREADS" ]|[ -z "$NUMCORES" ]|[ -z "$WRF_NUM_TILES" ]; then
+    OMP_NUM_THREADS=1
+    NUMCORES=$((ncores * sockets))
+    WRF_NUM_TILES=$((ncores * sockets * nthreads))
+    echo "You didn't specify arguments. So running with OMP_NUM_THREADS = $OMP_NUM_THREADS, WRF_NUM_TILES = $WRF_NUM_TILES"
+
+
+fi
+
+export OMP_NUM_THREADS
+export WRF_NUM_TILES
+
+rm -rf wrfbdy_d01 namelist.input wrfrst*
+ln -s /benchmark/wrfbdy_d01 wrfbdy_d01
+ln -s /benchmark/namelist.input namelist.input
+ln -s /benchmark/wrfrst* wrfrst_d01_2005-06-04_09:00:00
+
+log="${RESULTS_DIR}/${LOG}.singlenode"
+rm -rf $log
+rm -rf /tmp/rsl*
+touch $log
+
+echo "Running: mpirun -genvall -n $NUMCORES ./wrf.exe " 
+mpiexec.hydra -genvall -n $NUMCORES ./wrf.exe 
+
+rsl="rsl.error.0000"
+cp -rf /tmp/$rsl $log
+cd $WORKDIR/scripts
+
+results=$RESULTS_DIR/$RESULTS.singlenode
+rm -rf $results
+touch $results
+echo " The performance is in seconds per timestep"
+grep 'Timing for main' $log | awk '{print $9}' | tail -n719 | awk -f domain.awk > $results
+
+echo "Figure of merit : ` grep -m 1 mean $results` s/timestep " |tee -a $results.FOM
+awk 'BEGIN{print "WORKLOAD,FOM,UNIT"}{print "CONUS"","$6","$7}' $results.FOM >> $RESULTS_DIR/$CSV
+echo " " >> $RESULTS_DIR/$CSV
+echo "Output files are located at the $RESULTS_DIR"
+rm -r /tmp/rsl*
+
+###################
+%appenv multinode
+###################
+cd $WORKDIR/WRFV3/run
+rm -rf wrfbdy_d01 namelist.input wrfrst*
+ln -s /benchmark/wrfbdy_d01 wrfbdy_d01
+ln -s /benchmark/namelist.input namelist.input
+ln -s /benchmark/wrfrst* wrfrst_d01_2005-06-04_09:00:00
+
+################################
+%apprun multinode
+################################
+if [ ! -x "${RESULTS_DIR}" ]; then
+    mkdir -p ${RESULTS_DIR}
+fi
+
+cd $WORKDIR/WRFV3/run
+
+rm -rf /tmp/rsl*
+./wrf.exe
+
+yes | cp -rf /tmp/rsl.error.0000 ${RESULTS_DIR}/ 2>/dev/null
+
+exit 0
+##########################
+%apprun multinodeResults
+#########################
+CSV="multinode-$CSV"
+
+cd $WORKDIR/scripts
+grep 'Timing for main' ${RESULTS_DIR}/rsl.error.0000 | awk '{print $9}' | tail -n719 | awk -f domain.awk > ${RESULTS_DIR}/$RESULTS
+
+echo "Figure of merit : ` grep -m 1 mean ${RESULTS_DIR}/$RESULTS` s/timestep " |tee ${RESULTS_DIR}/$RESULTS.FOM 
+awk 'BEGIN{print "WORKLOAD,FOM,UNIT"}{print "CONUS"","$6","$7}' ${RESULTS_DIR}/$RESULTS.FOM >> ${RESULTS_DIR}/$CSV
+
+echo "Resuls located in ${RESULTS_DIR}"
+################################
+%setup
+################################
+
+# Create a work directory inside the container 
+export WORKDIR="$SINGULARITY_ROOTFS/WORKSPACE"
+mkdir -p $WORKDIR
+mkdir -p "$SINGULARITY_ROOTFS/benchmark"
+
+ARCH="avx512"
+APP="wrf"
+BIN="$location/$APP-$ARCH"
+
+# Copy all the binaries and anything else needed to run your binaries
+cp -r $BIN/* $WORKDIR/ 
+cp -r ${APP}/* -P $WORKDIR/
+cp sysinfo.sh -P $WORKDIR/
+
+chmod -R 777 $WORKDIR/*
+
+exit 0
+
+###############
+%apprun sysinfo
+###############
+echo "Getting system configuration"
+cd $WORKDIR
+./sysinfo.sh > ${RESULTS_DIR}/$SYSCONFIG
+
+echo "The $SYSCONFIG is located at $RESULTS_DIR"
+
+###############################################
+%apprun appinfo
+#################
+if [ ! -x "${RESULTS_DIR}" ]; then 
+    mkdir -p ${RESULTS_DIR}
+fi
+head -40 $WORKDIR/WRFV3/compile.log
+
+echo " "
+echo "-----------------------------"
+echo "expected perf  to use as a baseline on SKL baremetal:"
+cat $WORKDIR/appinfo |tee $RESULTS_DIR/$APPINFO
+
+###############################################
+%apprun clean
+#############
+echo "deleting folder $RESULTS_DIR"
+rm -rf $RESULTS_DIR
+
+###############################################
+%apphelp multinode
+####################
+Example running the container on a 4 node cluster over EDR on veger:
+
+(running from $HOME)
+$ vi bsub_script_mlx
+#!/bin/bash
+
+bsub -P S -q workq -R "4*{select[edr] span[ptile=1]}" -l IBSTACK=mlnx-4.3-3.0.2.0_862.11.6_2.10.4 -J wrf.edr -W 2:30 -o lsf wrf.edr.out -e wrf.edr.err "cd /home/sdouyeb;./run_container_multinode_edr.sh"
+
+
+$ vi run_container_multinode_edr.sh
+#!/bin/bash
+
+sourceME_Xeon 18.0 #source compiler and mpi
+containers_path="/home/sdouyeb"
+result_dir="/home/sdouyeb/results"
+nodes=4
+head -n $nodes $LSB_DJOB_HOSTFILE >& hostfile
+
+procs=`echo $nodes*40 | bc -l`
+
+log="$result_dir/wrf_container_edr.log"
+mpiexec.hydra -genv I_MPI_DEBUG 10 -genv I_MPI_FABRICS shm:dapl -genv I_MPI_DAPL_PROVIDER ofa-v2-mlx5_0-1u -genv I_MPI_DAPL_TRANSLATION_CACHE on -genv I_MPI_DAPL_UD_PROVIDER ofa-v2-mlx5_0-1u -genv I_MPI_DAPL_UD_TRANSLATION_CACHE on -genv DAPL_IB_MTU 4096 -genv I_MPI_DAPL_UD enable -genv I_MPI_FALLBACK 0 -hostfile hostfile -ppn 40 -np ${procs} singularity run -B $WORKLOAD_PATH:/benchmark --app multinode ${containers_path}/wrf.amd..simg
+
+$ ./bsub_script_mlx
+
+--------------------------------------------------------------------------------------------------------
+Example running the container on a 4 node cluster over OPA on veger:
+
+$ vi bsub_script_opa
+#!/bin/bash
+bsub -P S -q workq -R "4*{select[vpb] span[ptile=1]}" -J wrf.opa -W 20:30 -o wrf.opa.out -e lsf.opa.err "cd <$path>;./run_container_multinode_opa.sh"
+
+$ vi run_container_multinode_opa.sh
+#!/bin/sh
+
+source ~/sourceME_Xeon 18.0  #source compiler and mpi
+export I_MPI_JOB_RESPECT_PROCESS_PLACEMENT=0
+export I_MPI_PIN_MODE=mpd
+export I_MPI_PIN_DOMAIN=auto
+
+nodes=4
+head -n $nodes $LSB_DJOB_HOSTFILE >& hostfile
+
+procs=`echo $nodes*40 | bc -l`
+mpiexec.hydra -genv I_MPI_DEBUG 5 -genv I_MPI_FABRICS shm:tmi -genv I_MPI_TMI_PROVIDER psm2 -genv PSM2_IDENTIFY 1 -genv I_MPI_FALLBACK 0 -hostfile hostfile -ppn 40 -np ${procs} singularity run -B $WORKLOAD_PATH:/benchmark --app multinode wrf.simg 2>&1 | tee multinode_opa.log;
+
+$ ./bsub_script_opa
+

@@ -1,0 +1,259 @@
+﻿# Copyright (C) 2020 Intel Corporation
+# Legal Notice: See README file for licensing and other important information before using this file.
+
+Bootstrap: localimage
+From: /tmp/base.simg
+
+####################################################################################
+%help
+######
+EXAMPLES:
+  - Available apps:
+        $ singularity apps <container-name.simg>
+            gromacs
+            multinode
+            sysinfo
+            appinfo
+            clean
+
+  - Allowed ARCH flags:  avx512, avx2
+
+  - Available workloads inside the container:
+
+        Workload Name           : Argument to pass to the container
+        -----------------------------------------------------------
+        ion_channel_pme         : ion_channel.tpr
+        water_pme               : topol_pme.tpr
+        water_rf                : topol_rf.tpr
+        lignocellulose_rf       : lignocellulose-rf.tpr
+
+  - Running recommendations for SKL:
+        For topol_pme (both tpr and rf) – 30000 steps (over 50 (for pme) and 30 (for rf) sec on 16 nodes)
+        For ion_channel.tpr – 55000 steps (over 30 sec on 16 nodes).
+        For lignocellulose-rf.tpr – 8000 steps (over 30 sec on 16 nodes).
+
+  - Single node, to run one workload:
+        $ singularity run --writable-tmpfs --app gromacs <container-name.simg> $ARCH $NTHREADS $WORKLOAD $NSTEPS
+
+ -  Example to run using the host's runtime libraries
+        $ export SINGULARITY_BINDPATH="/opt/intel/compilers_and_libraries_2019.4.243:/opt/intel/compilers_and_libraries_2019.4.243,/opt/intel/compilers_and_libraries_2019.4.243:/mnt"
+        $ singularity run --writable-tmpfs --app gromacs gromacs.simg avx512 40 topol_pme.tpr 30000
+
+  - Single node to run all workloads:
+        $ singularity run --writable-tmpfs --app gromacs <container-name.simg> avx512 $NTHREADS
+  
+  - Cluster:
+        $ mpirun -n $NP -hostfile nodelist singularity run  --app multinode <container-name.simg> $ARCH  $WORKLOAD $NSTEPS
+
+   for example to run lignocellulose_rf workload on a 4/40 cores per node:
+        $ mpirun -n 160 -hostfile nodelist singularity run  --app multinode gromacs.simg avx512 lignocellulose-rf.tpr 8000
+
+  - Run multiple apps:
+        $ for app in sysinfo appinfo gromacs ; do singularity run --app $app <container-name.simg> $ARCH ; done
+
+- To write results to your directory of choice, set the CUSTOM_RESULTS_DIR variable at runtime as:
+        $ SINGULARITYENV_CUSTOM_RESULTS_DIR=/tmp/candy singularity run --app $APPNAME container.simg
+                OR
+        $ export SINGULARITYENV_CUSTOM_RESULTS_DIR=/tmp/candy
+        $ singularity run ....
+####################################################################################
+%environment
+#############
+now=`date '+%Y_%m_%d'`
+hostname=`hostname`
+
+APPNAME="gromacs"
+OUTPUT_DIR=${HOME}/${APPNAME}
+LOG="${hostname}_${APPNAME}_$now.log"
+RESULTS="${hostname}_${APPNAME}_$now.results"
+SYSCONFIG="${hostname}_${APPNAME}_$now.sysconfig"
+APPINFO="${hostname}_${APPNAME}_${now}.appinfo"
+
+if [ -n "$CUSTOM_RESULTS_DIR" ]; then
+    RESULTS_DIR=$CUSTOM_RESULTS_DIR
+else
+    RESULTS_DIR=$OUTPUT_DIR
+fi
+
+WORKDIR="$SINGULARITY_ROOTFS/WORKSPACE"
+export APPNAME OUTPUT_DIR LOG RESULTS SYSCONFIG WORKDIR now hostname RESULTS_DIR APPINFO
+
+
+#################################################################################
+%apprun gromacs
+###############
+which mpirun
+
+ARCH=$1
+if [ -z "$ARCH" ] ; then
+       echo "You are missing an argument ! Try again"
+       exit
+fi
+
+echo $ARCH
+
+RESULTS_DIR="$RESULTS_DIR-${ARCH}"
+echo $RESULTS_DIR
+
+if [ ! -x "$RESULTS_DIR" ]; then
+        mkdir $RESULTS_DIR
+fi
+
+WORKDIR=$WORKDIR/$APPNAME-$ARCH
+cd $WORKDIR/workloads
+
+NTHREADS=$2
+WORKLOAD=$3
+NSTEPS=$4
+
+nproc=`nproc`
+
+if [ -z "$NTHREADS" ]; then
+    NTHREADS=$((nproc / 2))
+    echo "no NTHREADS specified. So running with $NTHREADS threads"
+    echo "Run $singularity help gromacs.simg for more details"
+    echo " "
+fi
+
+if [ ! -z "$WORKLOAD" ] && [ ! -z "$NSTEPS" ]; then
+        if [ ! -f $WORKDIR/workloads/${WORKLOAD} ]; then
+          echo "Workload not found inside the container!"
+          exit
+        fi
+        log="${RESULTS_DIR}/${LOG}_${WORKLOAD}_${NSTEPS}"
+        echo "Running Gromacs container on single node.. Workload = $WORKLOAD and NSTEPS=$NSTEPS"
+        $WORKDIR/gmx_mpi mdrun -notunepme -ntomp $NTHREADS -dlb yes -v -nsteps $NSTEPS -resethway -noconfout -pin on -s $WORKLOAD 2>$log
+        echo "${WORKLOAD}_NSTEPS_${NSTEPS}:  `grep 'Performance' $log | awk '{print $2}'` ns/day"
+        echo " "
+        exit
+fi
+
+echo "no WORKLOAD specified. So running all the workloads: "
+echo "Run $singularity help gromacs.simg for more details"
+echo " "
+
+files=`echo *`
+value=""
+for workload in $files
+do
+   case "$workload" in
+        "topol_rf.tpr")
+          NSTEPS='10000'
+          WORKLOAD=$workload
+          ;;
+          "topol_pme.tpr")
+          NSTEPS='10000'
+          WORKLOAD=$workload
+          ;;
+        "ion_channel.tpr")
+          NSTEPS='55000'
+          WORKLOAD=$workload
+          ;;
+        "lignocellulose-rf.tpr")
+          NSTEPS='8000'
+          WORKLOAD=$workload
+          ;;
+        *)
+        echo "Not a valid workload"
+   esac
+
+    log="${RESULTS_DIR}/${LOG}_${WORKLOAD}_${NSTEPS}"
+    echo "Running command:  $WORKDIR/gmx_mpi mdrun -notunepme -ntomp $NTHREADS -dlb yes -v -nsteps $NSTEPS -resethway -noconfout -pin on -s $WORKLOAD -g $log"
+    $WORKDIR/gmx_mpi mdrun -notunepme -ntomp $NTHREADS -dlb yes -v -nsteps $NSTEPS -resethway -noconfout -pin on -s $WORKLOAD 2>$log # -g $log
+
+echo "${WORKLOAD}_NSTEPS_${NSTEPS} `grep 'Performance' $log | awk '{print $2}'` ns/day" |tee -a $RESULTS_DIR/$RESULTS
+    echo " "
+
+done
+
+echo "Output files are located at the $RESULTS_DIR"
+#################################################################################
+%apprun multinode
+##################
+which mpirun
+ARCH=$1
+if [ -z "$ARCH" ] ; then
+       echo "You are missing an argument ! Try again"
+       exit
+fi
+
+RESULTS_DIR="$RESULTS_DIR-${ARCH}"
+
+if [ ! -x "$RESULTS_DIR" ]; then
+        mkdir $RESULTS_DIR
+fi
+
+WORKDIR=$WORKDIR/$APPNAME-$ARCH
+cd $WORKDIR/workloads
+
+WORKLOAD=$2
+NSTEPS=$3
+
+if [ ! -z "$WORKLOAD" ] && [ ! -z "$NSTEPS" ]; then
+        log="${RESULTS_DIR}/${WORKLOAD}_${NSTEPS}_multinode_${now}"
+        touch $log
+        $WORKDIR/gmx_mpi mdrun -notunepme -dlb yes -v -nsteps $NSTEPS -resethway -noconfout -pin on -s $WORKLOAD 2>$log # -g $log
+        echo "${WORKLOAD}_NSTEPS_${NSTEPS}:  `grep 'Performance' $log | awk '{print $2}'` ns/day" |tee -a ${RESULTS_DIR}/$RESULTS
+        echo " "
+        exit
+fi
+
+echo "You must specify workload and nsteps. Try again!"
+echo "Run $singularity help gromacs.simg for more details"
+echo "Output file $RESULTS is located at $RESULTS_DIR"
+
+#################################################################################
+%setup
+#######
+# Setup the proxies and env variables for building the code
+
+export WORKDIR="$SINGULARITY_ROOTFS/WORKSPACE"
+mkdir -p $WORKDIR
+
+ARCH="avx512"
+APP="gromacs"
+BIN="$location/$APP-$ARCH"
+
+# Copy all the binaries and anything else needed to run your binaries
+cp -r $BIN $WORKDIR/
+cp sysinfo.sh -P $WORKDIR/
+cp appinfo/${APP}* -P $WORKDIR/
+cp help/${APP}* -P $WORKDIR/
+
+chmod -R 777 $WORKDIR/*
+
+exit 0
+
+###############################################
+%apprun appinfo
+#############
+cd $WORKDIR/workloads
+if [ ! -x "$RESULTS_DIR" ]; then
+    mkdir $RESULTS_DIR
+fi
+echo "expected perf  to use as a baseline on SKL baremetal:"
+cd $WORKDIR
+APP="gromacs"
+cat ${APP} |tee $RESULTS_DIR/$APPINFO
+
+echo "#########################################"
+cd $WORKDIR
+./gmx_mpi -version |tail -n 30 |tee -a $RESULTS_DIR/$APPINFO
+
+###############################################
+%apprun clean
+#############
+
+echo "deleting files $LOG $SYSCONFIG from $RESULTS_DIR"
+rm -rf $RESULTS_DIR
+
+#############################################
+%apprun sysinfo
+###############
+echo "Getting system configuration"
+cd $WORKDIR
+./sysinfo.sh > $RESULTS_DIR/$SYSCONFIG
+
+echo "The $SYSCONFIG is located at $RESULTS_DIR"
+
+

@@ -1,5 +1,5 @@
 # Goal:
-Create containers using Singularity for HPC apps and run them on the cloud or bare metal for Single and Cluster runs.
+Create containers using Singularity definition file for HPC apps and run them on the cloud or bare metal for Single and Cluster runs.
 
 
 ## Get Help

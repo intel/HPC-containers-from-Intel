@@ -1,0 +1,185 @@
+﻿# Copyright (C) 2020 Intel Corporation
+# Legal Notice: See README file for licensing and other important information before using this file.
+
+Bootstrap: scratch
+
+#######################################
+%help
+########
+This container build the binaries and dependencies from source codes 
+
+##################################################
+%pre
+###########
+# Setup the proxies and env variables for building the code
+
+version="2019.4.243"
+compiler="compilers_and_libraries_${version}"
+source /opt/intel/${compiler}/linux/bin/compilervars.sh intel64
+source /opt/intel/impi/${version}/intel64/bin/mpivars.sh
+
+export base=`pwd`
+appinfo=${base}/appinfo
+touch ${appinfo}
+date >> ${appinfo}
+
+export WRF_BIN="wrf-avx512"
+build=${base}/build
+if [ ! -x "$build" ]; then 
+   mkdir $build
+fi
+export build
+
+IO_LIBS=${build}/io_libs
+if [ ! -d "$IO_LIBS" ]; then
+  mkdir $IO_LIBS
+fi
+export IO_LIBS
+
+echo "Build WRF and all it dependencies"
+export FC=mpiifort
+export CXX=mpiicc
+export CC=mpiicc
+export CPP="icc -E"
+
+#********************
+echo "Build CURL"
+#********************
+cd $build
+curl="curl-7.64.0" ; echo "$curl" >> ${appinfo}
+rm -rf curl*
+wget https://curl.haxx.se/download/curl-7.64.0.tar.gz
+tar xzf curl-7.64.0.tar.gz
+cd $curl
+./configure --prefix=${IO_LIBS}
+make
+make -j 20 install
+
+#********************
+echo "Build ZLIB"
+#********************
+cd $build
+zlib="zlib-1.2.11" ; echo "$zlib" >> ${appinfo}
+rm -rf zlib*
+wget http://www.zlib.net/zlib-1.2.11.tar.gz
+tar xzf zlib-1.2.11.tar.gz
+cd $zlib
+./configure --prefix=${IO_LIBS}
+make
+make -j 20 install 
+
+#********************
+echo "Build SZIP"
+#********************
+cd $build
+szip="szip-2.1.1" ; echo "$szip" >> ${appinfo}
+rm -rf szip*
+wget https://support.hdfgroup.org/ftp/lib-external/szip/2.1.1/src/szip-2.1.1.tar.gz
+tar xzf szip-2.1.1.tar.gz
+cd $szip
+./configure --prefix=${IO_LIBS}
+make
+make -j 20 install
+
+#******************** 
+echo "Build HDF5"
+#********************
+cd $build
+hdf5="hdf5-1.8.21" ; echo "$hdf5" >> ${appinfo}
+rm -rf hdf*
+wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8/hdf5-1.8.21/src/hdf5-1.8.21.tar.gz
+tar xzf hdf5-1.8.21.tar.gz
+cd $hdf5 
+hdf5_opts="--prefix=$IO_LIBS --with-zlib=$IO_LIBS --with-szlib=$IO_LIBS --enable-fortran --enable-hl --enable-parallel"
+./configure $hdf5_opts
+make -j 20 install
+echo "HDF5 finished building"
+
+#*********************
+echo "Build NetCDF-C"
+#*********************
+cd $build
+netcdfc="netcdf-c-4.6.3" ; echo "$netcdfc" >> ${appinfo}
+rm -rf netcdf
+wget -O netcdf-c-4.6.3.tar.gz https://github.com/Unidata/netcdf-c/archive/v4.6.3.tar.gz
+tar xzf netcdf-c-4.6.3.tar.gz
+cd $netcdfc 
+export CPPFLAGS=" -I${IO_LIBS}/include"
+export LDFLAGS=" -L${IO_LIBS}/lib"
+export LIBS=" -lhdf5_hl -lhdf5 -lz -lsz -lmpi"
+export LD_FLAGS+=" -L${IO_LIBS}/lib"
+export LD_LIBRARY_PATH=${IO_LIBS}/lib:${LD_LIBRARY_PATH}
+./configure --prefix=${IO_LIBS}
+make
+make -j 20 install
+echo " NetCDF-C finished building"
+      
+#***************************
+echo "Build NetCDF-Fortran"
+#***************************
+cd $build
+netcdff="netcdf-fortran-4.4.5" ; echo "$netcdff" >> ${appinfo}
+rm -rf $netcdff
+wget -O netcdf-fortran-4.4.5.tar.gz https://github.com/Unidata/netcdf-fortran/archive/v4.4.5.tar.gz
+tar xzf netcdf-fortran-4.4.5.tar.gz
+cd $netcdff 
+export CPPFLAGS=" -I${IO_LIBS}/include"
+export LDFLAGS=" -L${IO_LIBS}/lib"
+./configure --prefix=$IO_LIBS
+make 
+make -j20 install 
+
+#********************
+echo "Build WRF"    
+#********************
+cd $build
+wrf=$build/WRFV3
+rm -rf $wrf
+wget --no-check-certificate http://www2.mmm.ucar.edu/wrf/src/WRFV3.9.1.1.TAR.gz
+tar xzf WRFV3.9.1.1.TAR.gz ; echo "WRFV3.9.1.1" >> ${appinfo}
+cd $wrf
+
+export HWRF=1
+export WRF_NMM_CORE=1
+export WRF_NMM_NEST=1
+export WRFIO_NCD_LARGE_FILE_SUPPORT=1
+
+export ZLIB=${IO_LIBS}
+export CURL=${IO_LIBS}
+export HDF5=${IO_LIBS}
+export NETCDF=${IO_LIBS}
+export LD_LIBRARY_PATH=${IO_LIBS}/lib:${LD_LIBRARY_PATH}
+
+./clean -a
+
+echo "Save the rsl files to /tmp to solve the container space issue"
+sed -i 's@rsl.error@/tmp/rsl.error@g' external/RSL_LITE/c_code.c
+sed -i 's@rsl.out@/tmp/rsl.out@g' external/RSL_LITE/c_code.c
+
+./configure <<<$'67\n1'
+
+echo "Modify configure.wrf file to include Intel optimizations"
+sed -E -i 's/^(DM_FC[[:blank:]]*=[[:blank:]]*).*/\1mpiifort/' configure.wrf
+sed -E -i 's/^(DM_CC[[:blank:]]*=[[:blank:]]*).*/\1mpiicc/' configure.wrf
+sed -E -i 's/^(OMP[[:blank:]]*=[[:blank:]]*).*/\1-qopenmp -fpp -auto/' configure.wrf
+sed -E -i 's/^(OMPCC[[:blank:]]*=[[:blank:]]*).*/\1-qopenmp -fpp -auto/' configure.wrf
+sed -E -i 's/^(FCBASEOPTS_NO_G[[:blank:]]*=[[:blank:]]*).*/\1-ip -w -ftz -align array64byte $(FORMAT_FREE) $(BYTESWAPIO) -fp-model fast=2 -no-heap-arrays -no-prec-div -no-prec-sqrt -fno-common -fimf-precision=low -fimf-domain-exclusion=15 -fimf-use-svml=true -xCORE-AVX2/' configure.wrf
+sed -E -i 's/^(CFLAGS_LOCAL[[:blank:]]*=[[:blank:]]*).*/\1-w -g -O3 -ip -fp-model fast=2 -no-prec-div -no-prec-sqrt -ftz -no-multibyte-chars -fimf-precision=low -fimf-domain-exclusion=15 -fimf-use-svml=true -xCORE-AVX2/' configure.wrf
+sed -E -i 's/^(LDFLAGS_LOCAL[[:blank:]]*=[[:blank:]]*).*/\1-ip -g -fp-model fast=2 -no-prec-div -no-prec-sqrt -ftz -align array64byte -fno-common -fimf-precision=low -fimf-domain-exclusion=15 -fimf-use-svml=true -xCORE-AVX2/' configure.wrf
+
+./compile -j 20 wrf 2>&1 | tee -a compile.log
+
+which icc >> ${appinfo}
+icc --version >> ${appinfo}
+mpirun --version >> ${appinfo}
+echo "WRF version3.9.1.1"  >> ${appinfo}
+
+#copy everything into a single location
+echo "build config: >> ${appinfo}
+grep "CFLAGS_LOCAL" $wrfconfigure.wrf >> ${appinfo}
+cd $base
+cp -rf ${IO_LIBS} $WRF_BIN/
+cp -rf ${build}/WRFV3 $WRF_BIN/
+cp -rf ${appinfo} $WRF_BIN/
+cp -rf $base/avx512/wrf.def $WRF_BIN/
+
