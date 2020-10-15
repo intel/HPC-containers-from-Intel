@@ -1,8 +1,9 @@
 ﻿# Intel-Hpc-Containers
 
-# - LEGAL NOTICE: By downloading and using this build file (the “Software Package”) and the included software or software made available for download, you agree to the terms and conditions of the software license agreements for the Software Package, which may also include notices, disclaimers, or license terms for third party software (together, the “Agreements”) included in this README file.
-#
-# - This Singularity definition file will automatically download :
+ - LEGAL NOTICE: By downloading and using this build file (the “Software Package”) and the included software or software made available for download, you agree to the terms and conditions of the software license agreements for the Software Package, which may also include notices, disclaimers, or license terms for third party software (together, the “Agreements”) included in this README file.
+
+ - This Singularity definition file will automatically download :
+ 
  		* CHARM++ 
 			- Download Location: (http://charm.cs.illinois.edu/distrib/charm-6.8.2.tar.gz )
 			- License: (http://charm.cs.illinois.edu/distrib/LICENSE)
@@ -31,14 +32,14 @@ o	The Singularity definition file will require these programs to be pre-installe
 
 Instructions to build a container:
 
-1.   Build the binaries and dependencies from this [recipe](link to the definition file) :
+1.   Build the binaries and dependencies from the Build definitin file :
 
      `$ sudo singularity build <ContainerName.simg> <NameBuild.def>`
 
 This will generate the binaries that you will need in step #3 and a container <ContainerName.simg> that you can use or ignore
 
 
-2.  Build the base container that includes the OS, Intel runtime libraries, and some independencies . Build it from this [recipe](link to the base container definition file) as:
+2.  Build the base container that includes the OS, Intel runtime libraries, and some independencies . Build it from the Run definition file as:
 	
      `$ sudo singularity build /tmp/base.simg base`
 
