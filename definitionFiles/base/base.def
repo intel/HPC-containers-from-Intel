@@ -1,12 +1,5 @@
 # Copyright (C) 2020 Intel Corporation
-# This software ("Software"), when executed, will install programs (â"Programs") that are governed by separate license terms, including without limitation, third party license terms, other Intel software license terms, and open source software license terms. Such separate license terms solely govern your use of the Programs. A list of the license terms for the Programs can be found in the third-party-programs.txt file included with the distribution of the Software."
-
-#BootStrap: yum
-#OSVersion: 7.8.2003
-#MirrorURL: http://linux-ftp.jf.intel.com/pub/mirrors/centos/%{OSVERSION}/os/$basearch/
-#MirrorURL: http://mirror.centos.org/centos-%{OSVERSION}/%{OSVERSION}/os/$basearch/
-
-#Include: yum
+# This software ("Software"), when executed, will install programs (Ã¢"Programs") that are governed by separate license terms, including without limitation, third party license terms, other Intel software license terms, and open source software license terms. Such separate license terms solely govern your use of the Programs. A list of the license terms for the Programs can be found in the third-party-programs.txt file included with the distribution of the Software."
 
 Bootstrap: docker
 From: centos:7
@@ -19,8 +12,6 @@ From: centos:7
 %post
 #####
 # proxy settings
-#export http_proxy="http://proxy-us.intel.com:911"
-#export https_proxy="http://proxy-us.intel.com:912"
 
 yum install -y sudo git wget vi which tree
 yum install -y hostname lscpu uptime redhat-lsb numactl
