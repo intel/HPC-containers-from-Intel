@@ -13,7 +13,7 @@ This container build the binaries and dependencies from source codes
 ###########
 # Setup the proxies and env variables for building the code
 
-version="2019.4.243"
+version="2020.4.304"
 compiler="compilers_and_libraries_${version}"
 source /opt/intel/${compiler}/linux/bin/compilervars.sh intel64
 source /opt/intel/impi/${version}/intel64/bin/mpivars.sh
