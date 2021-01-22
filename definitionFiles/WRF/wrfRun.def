@@ -28,12 +28,12 @@ After the container run is completed, the output files will be located at the $H
  - Run on single node:
       $ singularity run -B <$BENCH_DIR>:/benchmark --app singlenode wrf.simg
 	or if you want to specify the arguments: 
-      $ singularity run -B <$BENCH_DIR>:/benchmark --writable-tmpfs --app singlenode wrf.simg $OMP_NUM_THREADS $NUMCORES $WRF_NUM_TILES
+      $ singularity run -B <$BENCH_DIR>:/benchmark --writable-tmpfs --app singlenode wrf.simg 
 
    Example to run on a 40 cores SKL system:
       untar the bench_2.5km.tar.bz2 and mount it to the /benchmark dir inside the container:
       $ singularity run -B bench_2.5km:/benchmark --writable-tmpfs --app singlenode wrf.simg
-      $ singularity run -B bench_2.5km:/benchmark --writable-tmpfs --app singlenode wrf.simg 1 40 1 80
+      $ singularity run -B bench_2.5km:/benchmark --writable-tmpfs --app singlenode wrf.simg 
 
    Example to run from inside the container: 
       $ singularity shell -B bench_2.5km:/benchmark --writable-tmpfs --app singlenode wrf.simg 
@@ -78,11 +78,6 @@ export APPNAME LOG RESULTS CSV SYSCONFIG WORKDIR now hostname RESULTS_DIR APPINF
 export IO_LIBS=${WORKDIR}/io_libs
 export LD_LIBRARY_PATH=${IO_LIBS}/lib:${LD_LIBRARY_PATH}
 
-export WRFIO_NCD_LARGE_FILE_SUPPORT=1
-ulimit -s unlimited
-export I_MPI_DEBUG=5
-export KMP_STACKSIZE=512M
-
 ###############################
 %apprun singlenode
 ################################
@@ -91,10 +86,6 @@ if [ ! -x "$RESULTS_DIR" ]; then
 fi
 
 cd $WORKDIR/WRFV3/run
-
-OMP_NUM_THREADS=$1
-NUMCORES=$2
-WRF_NUM_TILES=$3
 
 sockets=`lscpu | grep Socket |awk '{print $2}'`
 ncores=`lscpu | grep Core | awk '{print $4}'`
@@ -108,9 +99,6 @@ if [ -z "$OMP_NUM_THREADS" ]|[ -z "$NUMCORES" ]|[ -z "$WRF_NUM_TILES" ]; then
 
 
 fi
-
-export OMP_NUM_THREADS
-export WRF_NUM_TILES
 
 rm -rf wrfbdy_d01 namelist.input wrfrst*
 ln -s /benchmark/wrfbdy_d01 wrfbdy_d01
@@ -227,54 +215,4 @@ cat $WORKDIR/appinfo |tee $RESULTS_DIR/$APPINFO
 echo "deleting folder $RESULTS_DIR"
 rm -rf $RESULTS_DIR
 
-###############################################
-%apphelp multinode
-####################
-Example running the container on a 4 node cluster over EDR on veger:
-
-(running from $HOME)
-$ vi bsub_script_mlx
-#!/bin/bash
-
-bsub -P S -q workq -R "4*{select[edr] span[ptile=1]}" -l IBSTACK=mlnx-4.3-3.0.2.0_862.11.6_2.10.4 -J wrf.edr -W 2:30 -o lsf wrf.edr.out -e wrf.edr.err "cd /home/sdouyeb;./run_container_multinode_edr.sh"
-
-
-$ vi run_container_multinode_edr.sh
-#!/bin/bash
-
-sourceME_Xeon 18.0 #source compiler and mpi
-containers_path="/home/sdouyeb"
-result_dir="/home/sdouyeb/results"
-nodes=4
-head -n $nodes $LSB_DJOB_HOSTFILE >& hostfile
-
-procs=`echo $nodes*40 | bc -l`
-
-log="$result_dir/wrf_container_edr.log"
-mpiexec.hydra -genv I_MPI_DEBUG 10 -genv I_MPI_FABRICS shm:dapl -genv I_MPI_DAPL_PROVIDER ofa-v2-mlx5_0-1u -genv I_MPI_DAPL_TRANSLATION_CACHE on -genv I_MPI_DAPL_UD_PROVIDER ofa-v2-mlx5_0-1u -genv I_MPI_DAPL_UD_TRANSLATION_CACHE on -genv DAPL_IB_MTU 4096 -genv I_MPI_DAPL_UD enable -genv I_MPI_FALLBACK 0 -hostfile hostfile -ppn 40 -np ${procs} singularity run -B $WORKLOAD_PATH:/benchmark --app multinode ${containers_path}/wrf.amd..simg
-
-$ ./bsub_script_mlx
-
---------------------------------------------------------------------------------------------------------
-Example running the container on a 4 node cluster over OPA on veger:
-
-$ vi bsub_script_opa
-#!/bin/bash
-bsub -P S -q workq -R "4*{select[vpb] span[ptile=1]}" -J wrf.opa -W 20:30 -o wrf.opa.out -e lsf.opa.err "cd <$path>;./run_container_multinode_opa.sh"
-
-$ vi run_container_multinode_opa.sh
-#!/bin/sh
-
-source ~/sourceME_Xeon 18.0  #source compiler and mpi
-export I_MPI_JOB_RESPECT_PROCESS_PLACEMENT=0
-export I_MPI_PIN_MODE=mpd
-export I_MPI_PIN_DOMAIN=auto
-
-nodes=4
-head -n $nodes $LSB_DJOB_HOSTFILE >& hostfile
-
-procs=`echo $nodes*40 | bc -l`
-mpiexec.hydra -genv I_MPI_DEBUG 5 -genv I_MPI_FABRICS shm:tmi -genv I_MPI_TMI_PROVIDER psm2 -genv PSM2_IDENTIFY 1 -genv I_MPI_FALLBACK 0 -hostfile hostfile -ppn 40 -np ${procs} singularity run -B $WORKLOAD_PATH:/benchmark --app multinode wrf.simg 2>&1 | tee multinode_opa.log;
-
-$ ./bsub_script_opa
 
