@@ -47,9 +47,8 @@ sed -i 's/;//g' $STMV/stmv.namd
 
 cd $base
 rm -rf namd
-git clone https://charm.cs.illinois.edu/gerrit/namd.git -b release-2-14-beta-1 --depth 1 namd 
+git clone https://charm.cs.illinois.edu/gerrit/namd.git -b release-2-15-alpha-1 --depth 1 namd 
 cd namd
-git pull "https://charm.cs.illinois.edu/gerrit/namd" refs/changes/64/5464/2   ; echo "namd version: release-2-14-beta-1" >>${appinfo}
 git clone https://github.com/UIUC-PPL/charm.git -b v6.10.1 --depth 1 ; echo "charm++ version: v6.10.1 " >>${appinfo}
 git clone https://github.com/tcltk/tcl.git -b core-8-5-branch --depth 1  ; echo "tcl version: core-8-5-branch" >>${appinfo}
 
@@ -66,8 +65,8 @@ export CC=icc; export CXX=icpc; export F90=ifort; export F77=ifort
 
 echo "Build namd for singlenode"
 cd $base/namd
-./config Linux-AVX512 --charm-base $base/namd/charm --with-mkl --charm-opts --tcl-prefix=$NAMD_TCL_BASE
-cd Linux-AVX512
+./config Linux-AVX512-icc --charm-base $base/namd/charm --with-mkl --charm-opts --tcl-prefix=$NAMD_TCL_BASE
+cd Linux-AVX512-icc
 make clean
 make -j 2>&1 | tee make.log
 
@@ -87,7 +86,8 @@ export CC CXX F90 F77
 export I_MPI_LINK=opt_mt
 export I_MPI_CC I_MPI_CXX I_MPI_F90 I_MPI_F77
 cd $base/namd
-./config Linux-AVX512MPI --charm-base $base/namd/charm --with-mkl --charm-opts --tcl-prefix=$NAMD_TCL_BASE 
+cp arch/Linux-AVX512-icc.arch arch/Linux-AVX512MPI.arch
+./config Linux-AVX512MPI --charm-base $base/namd/charm --charm-arch mpi-linux-x86_64-smp-mpicxx --with-mkl --charm-opts --tcl-prefix=$NAMD_TCL_BASE 
 cd Linux-AVX512MPI
 make clean
 make -j 2>&1 | tee makeMultinode.log
