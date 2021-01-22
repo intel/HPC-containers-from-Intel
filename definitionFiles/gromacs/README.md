@@ -29,7 +29,7 @@ Instructions to build a container:
 This will generate the binaries that you will need in step #3 and a dummy container <ContainerName.simg> that you can just use or ignore
 
 
-2.  Build the base container that includes the OS, Intel runtime libraries, and some independencies . Build it from the "Run" definition file as:
+2.  Build the base container that includes the OS, Intel runtime libraries, and some independencies . Build it from the base https://github.com/intel/HPC-containers-from-Intel/blob/master/definitionFiles/base/base.def recipe as:
 	
      `$ sudo singularity build /tmp/base.simg base`
 
