@@ -2,7 +2,6 @@
 # Legal Notice: See README file for licensing and other important information before using this file.
 
 Bootstrap: scratch
-
 ####################################################################################
 %help
 #####
@@ -11,11 +10,11 @@ This container build the binaries and dependencies from source codes
 #################################################################################
 %pre
 #####
+#source intel compiler here
+source /opt/intel/compilers_and_libraries_2020.4.304/linux/bin/compilervars.sh intel64
+source /opt/intel/compilers_and_libraries_2020.4.304/linux/mpi/intel64/bin/mpivars.sh
+source /opt/intel/compilers_and_libraries_2020.4.304/linux/mkl/bin/mklvars.sh intel64
 
-version="2020.1.217"
-compiler="compilers_and_libraries_${version}"
-source /opt/intel/${compiler}/linux/bin/compilervars.sh intel64
-source /opt/intel/${compiler}/linux/mpi/intel64/bin/mpivars.sh
 base=`pwd`
 appinfo=$base/appinfo
 touch ${appinfo}
@@ -34,10 +33,19 @@ echo "Get libraries"
 wget http://www.ks.uiuc.edu/Research/namd/utilities/apoa1.tar.gz
 wget http://www.ks.uiuc.edu/Research/namd/utilities/stmv.tar.gz
 
+# Standard APOA1 and STMV benchmarks using NPT, 1fs timestep, PME every 4
 tar -xvf apoa*.gz -C $APOA1 --strip-components=1
 tar -xvf stmv*.gz -C $STMV --strip-components=1
 
-chmod -R 777 apoa1 stmv
+# APOA1 and STMV with 2fs timestep configurations (NPT, PME every 2)
+cd $APOA1
+wget http://www.ks.uiuc.edu/Research/namd/2.13/benchmarks/apoa1_nptsr_cuda.namd
+sed -i 's/ldbalancer.*none//g' apoa1_nptsr_cuda.namd
+cd $STMV
+wget http://www.ks.uiuc.edu/Research/namd/2.13/benchmarks/stmv_nptsr_cuda.namd
+sed -i 's/ldbalancer.*none//g' stmv_nptsr_cuda.namd 
+
+chmod -R 777 $APOA1 $STMV
 #Fix and modify workload values
 sed -i -e '/numsteps/s/500/1000/' $APOA1/apoa1.namd 
 sed -i -e "/outputtiming/a\\outputenergies   600" $APOA1/apoa1.namd
@@ -48,8 +56,13 @@ sed -i 's/;//g' $STMV/stmv.namd
 cd $base
 rm -rf namd
 git clone https://charm.cs.illinois.edu/gerrit/namd.git -b release-2-15-alpha-1 --depth 1 namd 
+# if this clone doesn't work, request access to the namd gitlab repo:
+#	 https://gitlab.com/tcbgUIUC/namd
+# and download the code before you run the container:
+#	git clone git@gitlab.com:tcbgUIUC/namd.git -b release-2-15-alpha-1 --depth 1 release-2-15-alpha-1
+# 	cp -r <path>/release-2-15-alpha-1 namd"
 cd namd
-git clone https://github.com/UIUC-PPL/charm.git -b v6.10.1 --depth 1 ; echo "charm++ version: v6.10.1 " >>${appinfo}
+git clone https://github.com/UIUC-PPL/charm.git -b v6.10.2 --depth 1 ; echo "charm++ version: v6.10.2 " >>${appinfo}
 git clone https://github.com/tcltk/tcl.git -b core-8-5-branch --depth 1  ; echo "tcl version: core-8-5-branch" >>${appinfo}
 
 echo "build tcl"
@@ -98,11 +111,10 @@ mpirun --version >> ${appinfo}
 
 cd $base
 mkdir -p $APP
-cp -rf $base/namd/Linux-AVX512/namd2 $APP/
+cp -rf $base/namd/Linux-AVX512-icc/namd2 $APP/
 cp -rf $base/namd/Linux-AVX512MPI/namd2 $APP/namd2_mpi
 cp -rf $APOA1 $APP/
 cp -rf $STMV $APP/  
-cp -rf $base/avx512/namd.def $base/namd/
 cp -rf ${appinfo} $base/$APP/
  
 chmod -R 777 $APP/*

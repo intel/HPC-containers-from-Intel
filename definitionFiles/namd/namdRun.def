@@ -1,5 +1,4 @@
 # Copyright (C) 2020 Intel Corporation
-# Legal Notice: See README file for licensing and other important information before using this file.
 
 Bootstrap: localimage
 From: /tmp/base.simg
@@ -18,11 +17,7 @@ EXAMPLES:
   - Single node run as:
         $ singularity run --writable-tmpfs --app namd <container-name.simg> $ppn
 
--  Example to run using the host's runtime libraries
-        $ export SINGULARITY_BINDPATH="/opt/intel/compilers_and_libraries_2019.4.243:/opt/intel/compilers_and_libraries_2019.4.243,/opt/intel/compilers_and_libraries_2019.4.243:/mnt"
-        $ singularity run --writable-tmpfs --app gromacs gromacs.simg avx512 40 topol_pme.tpr 30000
-
-  - Cluster run (workloads available apoa1 and stmv):
+  - Cluster run (workloads available apoa1, stmv, apoa1_nptsr_cuda.namd, and stmv_nptsr_cuda.namd):
 
 	$ export SINGULARITYENV_LD_LIBRARY_PATH=$LD_LIBRARY_PATH
         $ export MPPEXEC="time -p mpiexec.hydra -genv I_MPI_DEBUG 5 -perhost $PPN"
@@ -58,8 +53,10 @@ now=`date '+%Y_%m_%d'`
 
 APPNAME="namd-avx512"
 OUTPUT_DIR=${HOME}/${APPNAME}
-APOA1="${APPNAME}_apoa1_$now.log"
-STMV="${APPNAME}_stmv_$now.log"
+APOA1="${APPNAME}_apoa1_1fs_$now.log"
+STMV="${APPNAME}_stmv_1fs_$now.log"
+APOA1_2fs="${APPNAME}_apoa1_2fs_$now.log"
+STMV_2fs="${APPNAME}_stmv_2fs_$now.log"
 
 RESULTS="${APPNAME}_$now.results"
 CSV="${APPNAME}_$now.csv"
@@ -75,11 +72,11 @@ else
 fi
 
 export APPNAME RESULTS CSV SYSCONFIG APPINFO WORKDIR RESULTS_DIR
-export APOA1 STMV MULTINODE
-
+export APOA1 STMV APOA1_2fs STMV_2fs
 ###########################################################################
 %apprun namd 
 ###########################################################################
+echo > $RESULTS_DIR/$RESULTS
 which mpirun
 
 if [ ! -x "$RESULTS_DIR" ]; then
@@ -107,11 +104,25 @@ echo "./namd2 +p $ppn stmv/stmv.namd +pemap 0-${var} > $RESULTS_DIR/$STMV"
 ./namd2 +p $ppn stmv/stmv.namd +pemap 0-${var} > $RESULTS_DIR/$STMV
 echo "NAMD run completed"
 
+echo "./namd2 +p $ppn apoa1/apoa1_nptsr_cuda.namd +pemap 0-${var} > $RESULTS_DIR/$APOA1_2fs "
+./namd2 +p $ppn apoa1/apoa1_nptsr_cuda.namd +pemap 0-${var} > $RESULTS_DIR/$APOA1_2fs
+
+echo "./namd2 +p $ppn stmv/stmv_nptsr_cuda.namd +pemap 0-${var} > $RESULTS_DIR/$STMV_2fs"
+./namd2 +p $ppn stmv/stmv_nptsr_cuda.namd +pemap 0-${var} > $RESULTS_DIR/$STMV_2fs
+echo "NAMD run completed"
+
+
 echo "FOM for APOA1 in ns/days:" |tee -a $RESULTS_DIR/$RESULTS
 grep 'Info: Benchmark time:' $RESULTS_DIR/$APOA1 | awk '{s+=log($8)}END{print 1/exp(s/NR)}' |tee -a $RESULTS_DIR/$RESULTS
 
 echo "FOM for STMV in ns/days:" |tee -a $RESULTS_DIR/$RESULTS
 grep 'Info: Benchmark time:' $RESULTS_DIR/$STMV | awk '{s+=log($8)}END{print 1/exp(s/NR)}' |tee -a $RESULTS_DIR/$RESULTS
+
+echo "FOM for APOA1_2fs in ns/days:" |tee -a $RESULTS_DIR/$RESULTS
+grep 'Info: Benchmark time:' $RESULTS_DIR/$APOA1_2fs | awk '{s+=log($8)}END{print 1/exp(s/NR)}' |tee -a $RESULTS_DIR/$RESULTS
+
+echo "FOM for STMV_2fs in ns/days:" |tee -a $RESULTS_DIR/$RESULTS
+grep 'Info: Benchmark time:' $RESULTS_DIR/$STMV_2fs | awk '{s+=log($8)}END{print 1/exp(s/NR)}' |tee -a $RESULTS_DIR/$RESULTS
 
 awk 'BEGIN{print "WORKLOAD,FOM,UNIT"}{print $1","$2",""ns/days"}' ${RESULTS_DIR}/${RESULTS} >> ${RESULTS_DIR}/${CSV}
 echo "Results are in $RESULTS_DIR"
@@ -211,7 +222,7 @@ export WORKDIR="$SINGULARITY_ROOTFS/WORKSPACE"
 mkdir -p $WORKDIR
 
 APP="namd"
-BIN="$location/$APP-*"
+BIN="<location>/$APP-*"
 
 # Copy all the binaries and anything else needed to run your binaries
 cp -r $BIN $WORKDIR/
