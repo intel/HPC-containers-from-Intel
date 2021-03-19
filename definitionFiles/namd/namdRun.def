@@ -222,12 +222,12 @@ export WORKDIR="$SINGULARITY_ROOTFS/WORKSPACE"
 mkdir -p $WORKDIR
 
 APP="namd"
-BIN="<location>/$APP-*"
+BIN="${APP}-*"
 
 # Copy all the binaries and anything else needed to run your binaries
 cp -r $BIN $WORKDIR/
-cp -r sysinfo.sh -P $WORKDIR/
-cp -r help/${APP}* -P $WORKDIR/
+if test -f sysinfo.sh; then cp -r sysinfo.sh -P $WORKDIR/; fi
+if test -d help; then cp -r help/${APP}* -P $WORKDIR/; fi
 
 chmod -R 777 $WORKDIR/*
 

@@ -11,9 +11,14 @@ This container build the binaries and dependencies from source codes
 %pre
 #####
 #source intel compiler here
-source /opt/intel/compilers_and_libraries_2020.4.304/linux/bin/compilervars.sh intel64
-source /opt/intel/compilers_and_libraries_2020.4.304/linux/mpi/intel64/bin/mpivars.sh
-source /opt/intel/compilers_and_libraries_2020.4.304/linux/mkl/bin/mklvars.sh intel64
+
+INTEL_VERSION=${INTEL_VERSION:-2020.4.304}
+INTEL_INSTALL_FOLDER=${INTEL_INSTALL_FOLDER:-/opt/intel}
+compiler="compilers_and_libraries_${INTEL_VERSION}"
+
+source ${INTEL_INSTALL_FOLDER}/${compiler}/linux/bin/compilervars.sh intel64
+source ${INTEL_INSTALL_FOLDER}/${compiler}/linux/mpi/intel64/bin/mpivars.sh
+source ${INTEL_INSTALL_FOLDER}/${compiler}/linux/mkl/bin/mklvars.sh intel64
 
 base=`pwd`
 appinfo=$base/appinfo
