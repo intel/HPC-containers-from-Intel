@@ -1,5 +1,4 @@
-﻿# Copyright (C) 2020 Intel Corporation
-# Legal Notice: See README file for licensing and other important information before using this file.
+# Copyright (C) 2020 Intel Corporation
 
 Bootstrap: scratch
 
@@ -12,15 +11,11 @@ This container build the binaries and dependencies from source codes
 %pre
 ###########
 # Setup the proxies and env variables for building the code
-
-version="2020.4.304"
-compiler="compilers_and_libraries_${version}"
-source /opt/intel/${compiler}/linux/bin/compilervars.sh intel64
-source /opt/intel/impi/${version}/intel64/bin/mpivars.sh
-
 export base=`pwd`
 appinfo=${base}/appinfo
 touch ${appinfo}
+
+echo "****************appinfo of this container*************" >> ${appinfo}
 date >> ${appinfo}
 
 export WRF_BIN="wrf-avx512"
@@ -53,7 +48,7 @@ tar xzf curl-7.64.0.tar.gz
 cd $curl
 ./configure --prefix=${IO_LIBS}
 make
-make -j 20 install
+make -j `nproc` install 2>&1 | tee -a $curl.compile.log
 
 #********************
 echo "Build ZLIB"
@@ -66,7 +61,7 @@ tar xzf zlib-1.2.11.tar.gz
 cd $zlib
 ./configure --prefix=${IO_LIBS}
 make
-make -j 20 install 
+make -j `nproc` install 2>&1 | tee -a $zlib.compile.log
 
 #********************
 echo "Build SZIP"
@@ -79,7 +74,7 @@ tar xzf szip-2.1.1.tar.gz
 cd $szip
 ./configure --prefix=${IO_LIBS}
 make
-make -j 20 install
+make -j `nproc` install 2>&1 | tee -a $szip.compile.log
 
 #******************** 
 echo "Build HDF5"
@@ -92,7 +87,7 @@ tar xzf hdf5-1.8.21.tar.gz
 cd $hdf5 
 hdf5_opts="--prefix=$IO_LIBS --with-zlib=$IO_LIBS --with-szlib=$IO_LIBS --enable-fortran --enable-hl --enable-parallel"
 ./configure $hdf5_opts
-make -j 20 install
+make -j `nproc` install 2>&1 | tee -a $hdf5.compile.log
 echo "HDF5 finished building"
 
 #*********************
@@ -111,7 +106,7 @@ export LD_FLAGS+=" -L${IO_LIBS}/lib"
 export LD_LIBRARY_PATH=${IO_LIBS}/lib:${LD_LIBRARY_PATH}
 ./configure --prefix=${IO_LIBS}
 make
-make -j 20 install
+make -j `nproc` install 2>&1 | tee -a $netcdfc.compile.log
 echo " NetCDF-C finished building"
       
 #***************************
@@ -127,22 +122,21 @@ export CPPFLAGS=" -I${IO_LIBS}/include"
 export LDFLAGS=" -L${IO_LIBS}/lib"
 ./configure --prefix=$IO_LIBS
 make 
-make -j20 install 
+make -j `nproc` install 2>&1 | tee -a $netcdff.compile.log
 
 #********************
 echo "Build WRF"    
 #********************
 cd $build
-wrf=$build/WRFV3
+wrf=$build/WRF-4.2.2
 rm -rf $wrf
-wget --no-check-certificate http://www2.mmm.ucar.edu/wrf/src/WRFV3.9.1.1.TAR.gz
-tar xzf WRFV3.9.1.1.TAR.gz ; echo "WRFV3.9.1.1" >> ${appinfo}
+wget --no-check-certificate https://github.com/wrf-model/WRF/archive/v4.2.2.tar.gz 
+tar xvf v4.2.2.tar.gz ; echo "WRFV4.2.2" >> ${appinfo}
 cd $wrf
 
-export HWRF=1
-export WRF_NMM_CORE=1
-export WRF_NMM_NEST=1
+export J="-j 6"
 export WRFIO_NCD_LARGE_FILE_SUPPORT=1
+export WRF_EM_CORE=1
 
 export ZLIB=${IO_LIBS}
 export CURL=${IO_LIBS}
@@ -159,27 +153,22 @@ sed -i 's@rsl.out@/tmp/rsl.out@g' external/RSL_LITE/c_code.c
 ./configure <<<$'67\n1'
 
 echo "Modify configure.wrf file to include Intel optimizations"
-sed -E -i 's/^(DM_FC[[:blank:]]*=[[:blank:]]*).*/\1mpiifort/' configure.wrf
-sed -E -i 's/^(DM_CC[[:blank:]]*=[[:blank:]]*).*/\1mpiicc/' configure.wrf
-sed -E -i 's/^(OMP[[:blank:]]*=[[:blank:]]*).*/\1-qopenmp -fpp -auto/' configure.wrf
-sed -E -i 's/^(OMPCC[[:blank:]]*=[[:blank:]]*).*/\1-qopenmp -fpp -auto/' configure.wrf
-sed -E -i 's/^(FCBASEOPTS_NO_G[[:blank:]]*=[[:blank:]]*).*/\1-ip -w -ftz -align array64byte $(FORMAT_FREE) $(BYTESWAPIO) -fp-model fast=2 -no-heap-arrays -no-prec-div -no-prec-sqrt -fno-common -fimf-precision=low -fimf-domain-exclusion=15 -fimf-use-svml=true -xCORE-AVX2/' configure.wrf
-sed -E -i 's/^(CFLAGS_LOCAL[[:blank:]]*=[[:blank:]]*).*/\1-w -g -O3 -ip -fp-model fast=2 -no-prec-div -no-prec-sqrt -ftz -no-multibyte-chars -fimf-precision=low -fimf-domain-exclusion=15 -fimf-use-svml=true -xCORE-AVX2/' configure.wrf
-sed -E -i 's/^(LDFLAGS_LOCAL[[:blank:]]*=[[:blank:]]*).*/\1-ip -g -fp-model fast=2 -no-prec-div -no-prec-sqrt -ftz -align array64byte -fno-common -fimf-precision=low -fimf-domain-exclusion=15 -fimf-use-svml=true -xCORE-AVX2/' configure.wrf
+sed -i 's/-lm / -lsvml /' ./configure.wrf
+sed -E -i 's/^(LDFLAGS_LOCAL[[:blank:]]*=[[:blank:]]*).*/\1-ip -lsvml/' configure.wrf
+sed -E -i 's/^(CFLAGS_LOCAL[[:blank:]]*=[[:blank:]]*).*/\1-w -ip -xCORE-AVX2/' configure.wrf
+sed -E -i 's/^(FCBASEOPTS_NO_G[[:blank:]]*=[[:blank:]]*).*/\1-ip -w -ftz -align array64byte -fno-alias $(FORMAT_FREE) $(BYTESWAPIO) -fp-model fast=2 -fimf-use-svml=true -inline-max-size=12000 -inline-max-total-size=30000 -vec-threshold0 -qno-opt-dynamic-align -xCORE-AVX2/' configure.wrf
+sed -E -i 's/^(ARCH_LOCAL[[:blank:]]*=[[:blank:]]*).*/\1-DNONSTANDARD_SYSTEM_FUNC -DRPC_TYPES=2 -DXEON_SIMD/' configure.wrf
+sed -E -i 's/^(FCOPTIM[[:blank:]]*=[[:blank:]]*).*/\1-O3/' configure.wrf
 
 ./compile -j 20 wrf 2>&1 | tee -a compile.log
 
+echo "build config:" >> ${appinfo}
+grep "CFLAGS_LOCAL" compile.log >> ${appinfo}
 which icc >> ${appinfo}
 icc --version >> ${appinfo}
 mpirun --version >> ${appinfo}
-echo "WRF version3.9.1.1"  >> ${appinfo}
 
-#copy everything into a single location
-echo "build config: >> ${appinfo}
-grep "CFLAGS_LOCAL" $wrfconfigure.wrf >> ${appinfo}
 cd $base
 cp -rf ${IO_LIBS} $WRF_BIN/
-cp -rf ${build}/WRFV3 $WRF_BIN/
+cp -rf ${build}/WRF-4.2.2 $WRF_BIN/
 cp -rf ${appinfo} $WRF_BIN/
-cp -rf $base/avx512/wrf.def $WRF_BIN/
-

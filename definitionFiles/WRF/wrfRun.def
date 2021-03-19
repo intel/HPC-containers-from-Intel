@@ -1,4 +1,4 @@
-﻿# Copyright (C) 2020 Intel Corporation
+# Copyright (C) 2021 Intel Corporation
 # Legal Notice: See README file for licensing and other important information before using this file.
 
 Bootstrap: localimage
@@ -8,9 +8,9 @@ From: /tmp/base.simg
 %help
 ################################
 WRF benchmark files are not part of the container for WRF because they are too large. You must download them by :
-    wget http://www2.mmm.ucar.edu/wrf/bench/conus12km_v3911/bench_12km.tar.bz2
-    wget http://www2.mmm.ucar.edu/wrf/bench/conus2.5km_v3911/bench_2.5km.tar.bz2
-    The container's runscript only runs the 2.5km benchmark. To run other benchmarks, you must run from inside the container
+    wget https://www2.mmm.ucar.edu/wrf/src/conus12km.tar.gz
+    wget https://www2.mmm.ucar.edu/wrf/src/conus2.5km.tar.gz
+
 ##### 
  USAGE: 
 
@@ -26,28 +26,35 @@ After the container run is completed, the output files will be located at the $H
             clean
  
  - Run on single node:
-      $ singularity run -B <$BENCH_DIR>:/benchmark --app singlenode wrf.simg
-	or if you want to specify the arguments: 
-      $ singularity run -B <$BENCH_DIR>:/benchmark --writable-tmpfs --app singlenode wrf.simg 
+      $ singularity run -B <$BENCH_DIR>:/benchmark --writable-tmpfs --app singlenode wrf.simg
 
-   Example to run on a 40 cores SKL system:
+Example to run on a 64 cores ICX system:
       untar the bench_2.5km.tar.bz2 and mount it to the /benchmark dir inside the container:
-      $ singularity run -B bench_2.5km:/benchmark --writable-tmpfs --app singlenode wrf.simg
-      $ singularity run -B bench_2.5km:/benchmark --writable-tmpfs --app singlenode wrf.simg 
+         ulimit -s unlimited
+        export I_MPI_PIN_DOMAIN=auto
+        export I_MPI_PIN_ORDER=bunch
+        export I_MPI_DEBUG=5
+        export OMP_NUM_THREADS=1
+        export OMP_PLACES=cores
+        export OMP_PROC_BIND=close
+        export KMP_STACKSIZE=512M
+        export WRF_NUM_TILES=90
+        export WRFIO_NCD_LARGE_FILE_SUPPORT=1
+        $ singularity run -B bench_2.5km:/benchmark --writable-tmpfs --app singlenode wrf.simg
 
    Example to run from inside the container: 
-      $ singularity shell -B bench_2.5km:/benchmark --writable-tmpfs --app singlenode wrf.simg 
+      $ singularity shell -B bench_2.5km:/benchmark --app singlenode wrf.simg 
       $ cd $WORKDIR/WRFV3/run 
       $ ln -s /benchmark/wrfbdy_d01 wrfbdy_d01
       $ ln -s /benchmark/wrfrst_$xxx.. wrfrst_$xxx...
       $ ln -s /benchmark/namelist.input namelist.input
-      $ mpirun -genvall -n 40 ./wrf.exe |tee $log
+      $ mpirun -genvall -n $NUMCORES --ppn $NUMCORES ./wrf.exe |tee $log
       $ cd $WORKDIR/scripts
       $ cp /tmp/rsl.error.0000 .
       $	./postproc.sh rsl.error.0000 |tee -a <resultsfilename> # to parse the results
 
 - Multinode node run as:
-        $ singularity run-help --app multinode <container-name.simg>
+        $ singularity help --app multinode <container-name.simg>
 
 - Parse the results for multinode run:
 	$ singularity run --app multinodeResults <container-name.simg>
@@ -72,46 +79,47 @@ SYSCONFIG="${hostname}_${APPNAME}.sysconfig"
 APPINFO="${hostname}_${APPNAME}.appinfo"
 
 WORKDIR=$SINGULARITY_ROOTFS/WORKSPACE
-
 export APPNAME LOG RESULTS CSV SYSCONFIG WORKDIR now hostname RESULTS_DIR APPINFO
 
 export IO_LIBS=${WORKDIR}/io_libs
 export LD_LIBRARY_PATH=${IO_LIBS}/lib:${LD_LIBRARY_PATH}
-
 ###############################
 %apprun singlenode
 ################################
 if [ ! -x "$RESULTS_DIR" ]; then
     mkdir -p "$RESULTS_DIR"
 fi
+echo > $RESULTS_DIR/$RESULTS
 
-cd $WORKDIR/WRFV3/run
+cd $WORKDIR/WRF-4.2.2/run
 
-sockets=`lscpu | grep Socket |awk '{print $2}'`
-ncores=`lscpu | grep Core | awk '{print $4}'`
-nthreads=`lscpu | grep Thread | awk '{print $4}'`
+CORES=`lscpu | grep "Core(s) per socket" | awk '{print $4}'`
+SOCKETS=`lscpu | grep Socket | awk '{print $2}'`
+THREADS=`lscpu | grep "Thread" | awk '{print $4}'`
 
-if [ -z "$OMP_NUM_THREADS" ]|[ -z "$NUMCORES" ]|[ -z "$WRF_NUM_TILES" ]; then
-    OMP_NUM_THREADS=1
-    NUMCORES=$((ncores * sockets))
-    WRF_NUM_TILES=$((ncores * sockets * nthreads))
-    echo "You didn't specify arguments. So running with OMP_NUM_THREADS = $OMP_NUM_THREADS, WRF_NUM_TILES = $WRF_NUM_TILES"
-
-
+if [ -z "$NUMCORES" ]; then
+    NUMCORES=$((CORES * SOCKETS))
+    echo "You didn't specify arguments. So running with  NUMCORES=$NUMCORES"
 fi
 
 rm -rf wrfbdy_d01 namelist.input wrfrst*
 ln -s /benchmark/wrfbdy_d01 wrfbdy_d01
-ln -s /benchmark/namelist.input namelist.input
-ln -s /benchmark/wrfrst* wrfrst_d01_2005-06-04_09:00:00
+ln -s /benchmark/namelist.input.rst namelist.input
+ln -s /benchmark/wrfrst* wrfrst_d01_2019-11-26_23:00:00
+
+ln -s /benchmark/freezeH2O.dat freezeH2O.dat
+ln -s /benchmark/qr_acr_qg.dat qr_acr_qg.dat
+ln -s /benchmark/qr_acr_qgV2.dat qr_acr_qgV2.dat
+ln -s /benchmark/qr_acr_qs.dat qr_acr_qs.dat
+ln -s /benchmark/qr_acr_qsV2.dat qr_acr_qsV2.dat
 
 log="${RESULTS_DIR}/${LOG}.singlenode"
 rm -rf $log
 rm -rf /tmp/rsl*
 touch $log
 
-echo "Running: mpirun -genvall -n $NUMCORES ./wrf.exe " 
-mpiexec.hydra -genvall -n $NUMCORES ./wrf.exe 
+echo "Running: mpirun -genvall -n $NUMCORES -ppn $NUMCORES ./wrf.exe " 
+mpiexec.hydra -genvall -n $NUMCORES --ppn $NUMCORES ./wrf.exe 
 
 rsl="rsl.error.0000"
 cp -rf /tmp/$rsl $log
@@ -126,31 +134,39 @@ grep 'Timing for main' $log | awk '{print $9}' | tail -n719 | awk -f domain.awk 
 echo "Figure of merit : ` grep -m 1 mean $results` s/timestep " |tee -a $results.FOM
 awk 'BEGIN{print "WORKLOAD,FOM,UNIT"}{print "CONUS"","$6","$7}' $results.FOM >> $RESULTS_DIR/$CSV
 echo " " >> $RESULTS_DIR/$CSV
+
 echo "Output files are located at the $RESULTS_DIR"
 rm -r /tmp/rsl*
 
 ###################
 %appenv multinode
 ###################
-cd $WORKDIR/WRFV3/run
+cd $WORKDIR/WRF-4.2.2/run
 rm -rf wrfbdy_d01 namelist.input wrfrst*
 ln -s /benchmark/wrfbdy_d01 wrfbdy_d01
-ln -s /benchmark/namelist.input namelist.input
-ln -s /benchmark/wrfrst* wrfrst_d01_2005-06-04_09:00:00
+ln -s /benchmark/namelist.input.rst namelist.input
+ln -s /benchmark/wrfrst* wrfrst_d01_2019-11-26_23:00:00
 
+ln -s /benchmark/freezeH2O.dat freezeH2O.dat
+ln -s /benchmark/qr_acr_qg.dat qr_acr_qg.dat
+ln -s /benchmark/qr_acr_qgV2.dat qr_acr_qgV2.dat
+ln -s /benchmark/qr_acr_qs.dat qr_acr_qs.dat
+ln -s /benchmark/qr_acr_qsV2.dat qr_acr_qsV2.dat
 ################################
 %apprun multinode
 ################################
-if [ ! -x "${RESULTS_DIR}" ]; then
-    mkdir -p ${RESULTS_DIR}
+results_dir=${RESULTS_DIR}/wrf.multinode
+
+if [ ! -x "$results_dir" ]; then
+    mkdir -p $results_dir
 fi
 
-cd $WORKDIR/WRFV3/run
+cd $WORKDIR/WRF-4.2.2/run
 
 rm -rf /tmp/rsl*
 ./wrf.exe
 
-yes | cp -rf /tmp/rsl.error.0000 ${RESULTS_DIR}/ 2>/dev/null
+yes | cp -rf /tmp/rsl.error.0000 ${results_dir}/ 2>/dev/null
 
 exit 0
 ##########################
@@ -165,10 +181,10 @@ echo "Figure of merit : ` grep -m 1 mean ${RESULTS_DIR}/$RESULTS` s/timestep " |
 awk 'BEGIN{print "WORKLOAD,FOM,UNIT"}{print "CONUS"","$6","$7}' ${RESULTS_DIR}/$RESULTS.FOM >> ${RESULTS_DIR}/$CSV
 
 echo "Resuls located in ${RESULTS_DIR}"
+
 ################################
 %setup
 ################################
-
 # Create a work directory inside the container 
 export WORKDIR="$SINGULARITY_ROOTFS/WORKSPACE"
 mkdir -p $WORKDIR
@@ -195,14 +211,13 @@ cd $WORKDIR
 ./sysinfo.sh > ${RESULTS_DIR}/$SYSCONFIG
 
 echo "The $SYSCONFIG is located at $RESULTS_DIR"
-
 ###############################################
 %apprun appinfo
 #################
-if [ ! -x "${RESULTS_DIR}" ]; then 
-    mkdir -p ${RESULTS_DIR}
+if [ ! -x "$RESULTS_DIR" ]; then 
+    mkdir -p $RESULTS_DIR
 fi
-head -40 $WORKDIR/WRFV3/compile.log
+head -40 $WORKDIR/WRF-4.2.2/compile.log
 
 echo " "
 echo "-----------------------------"
@@ -214,5 +229,4 @@ cat $WORKDIR/appinfo |tee $RESULTS_DIR/$APPINFO
 #############
 echo "deleting folder $RESULTS_DIR"
 rm -rf $RESULTS_DIR
-
 
