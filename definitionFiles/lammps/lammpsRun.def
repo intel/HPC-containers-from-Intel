@@ -68,12 +68,6 @@ fi
 
 WORKDIR="$SINGULARITY_ROOTFS/WORKSPACE"
 
-#ARCH=$1
-#if [ -z "$ARCH" ] ; then
-#        echo "You are missing an argument ! Try again"
-#       exit
-#fi
-
 ARCH="avx512"
 export APPNAME OUTPUT_DIR LOG RESULTS CSV SYSCONFIG APPINFO WORKDIR now hostname RESULTS_DIR ARCH
 export  I_MPI_SHM_LMT
@@ -191,12 +185,13 @@ mkdir -p $WORKDIR
 
 APP="lammps"
 ARCH="avx512"
-BIN="/nfs/pdx/home/Containers/binaries/$APP-${ARCH}"
+CONTAINTERS_HOME=${CONTAINERS_HOME:-/nfs/pdx/home/Containers/binaries}
+BIN="${CONTAINTERS_HOME}/$APP-${ARCH}"
 
 # Copy all the binaries and anything else needed to run your binaries
 cp -r $BIN $WORKDIR/ 
-cp sysinfo.sh -P $WORKDIR/
-cp appinfo/${APP}* -P $WORKDIR/
+if test -f sysinfo.sh; then cp sysinfo.sh -P $WORKDIR/ ; fi
+if test -d appinfo; then  cp appinfo/${APP}* -P $WORKDIR/; fi
 
 chmod -R 777 $WORKDIR/*
 
@@ -208,7 +203,7 @@ exit 0
 echo "Getting system configuration"
 cd $WORKDIR
 RESULTS_DIR="${RESULTS_DIR}-${ARCH}"
-./sysinfo.sh > $RESULTS_DIR/$SYSCONFIG
+if test -f sysinfo.sh; then ./sysinfo.sh > $RESULTS_DIR/$SYSCONFIG; fi
 
 echo "The $SYSCONFIG is located at $RESULTS_DIR"
 
@@ -222,7 +217,7 @@ cat ${APP} |tee $RESULTS_DIR/$APPINFO
 echo "Run command: mpiexec.hydra -np $NUMCORES ./lmp_intel_cpu_intelmpi -in $file -log none -pk intel 0 omp $OMP_NUM_THREADS -sf intel -v m 1" |tee -a $RESULTS_DIR/$APPINFO
 
 cd $APP-$ARCH
-cat appinfo |tee -a $RESULTS_DIR/$APPINFO
+if test -d appinfo; then cat appinfo |tee -a $RESULTS_DIR/$APPINFO; fi
 
 #################################
 %apprun clean

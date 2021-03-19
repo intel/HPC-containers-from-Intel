@@ -12,9 +12,10 @@ This container build the binaries and dependencies from source codes
 ###########
 # Setup the proxies and env variables for building the code
 
-version="2019.4.243"
-compiler="compilers_and_libraries_${version}"
-source /opt/intel/${compiler}/linux/bin/compilervars.sh intel64
+INTEL_VERSION=${INTEL_VERSION:-2019.4.243}
+INTEL_INSTALL_FOLDER=${INTEL_INSTALL_FOLDER:-/opt/intel}
+compiler="compilers_and_libraries_${INTEL_VERSION}"
+source ${INTEL_INSTALL_FOLDER}/${compiler}/linux/bin/compilervars.sh intel64
 
 export base=`pwd`
 appinfo=${base}/appinfo
@@ -61,7 +62,6 @@ which icc >> ${appinfo}
 icc --version >> ${appinfo}
 mpirun --version >> ${appinfo}
 cp ${appinfo} $BENCH_DIR/
-cp $base/avx512/lammps.def $BENCH_DIR/
 
 cd $BENCH_DIR
 echo " generating the lc workload ..."
@@ -70,7 +70,8 @@ mpirun -np 20 ./lmp_intel_cpu_intelmpi  -in in.lc_generate_restart -log lc.log -
 #################
 %setup
 #######
-NFS="/nfs/pdx/home/Containers/binaries"
+CONTAINTERS_HOME=${CONTAINERS_HOME:-/nfs/pdx/home/Containers/binaries}
+install -d ${CONTAINERS_HOME}
 NAME="lammps"
 ARCH="avx512"
 KEY="ALL"
@@ -80,7 +81,7 @@ tar cfv ${APP}.tar ${APP}
 chmod -R 777 *
 
 #cleanup
-cp -rf ${NAME} ${NFS}/${NAME}${KEY}
-cp -r ${APP}* ${NFS}/
+cp -rf ${NAME} ${CONTAINTERS_HOME}/${NAME}${KEY}
+cp -r ${APP}* ${CONTAINTERS_HOME}/
 #rm -rf ${NAME}*
 
