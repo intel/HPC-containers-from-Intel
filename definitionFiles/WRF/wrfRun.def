@@ -10,6 +10,7 @@ From: /tmp/base.simg
 WRF benchmark files are not part of the container for WRF because they are too large. You must download them by :
     wget https://www2.mmm.ucar.edu/wrf/src/conus12km.tar.gz
     wget https://www2.mmm.ucar.edu/wrf/src/conus2.5km.tar.gz
+   *** Only conus2.5km is automated in this recipe
 
 ##### 
  USAGE: 
@@ -29,7 +30,7 @@ After the container run is completed, the output files will be located at the $H
       $ singularity run -B <$BENCH_DIR>:/benchmark --writable-tmpfs --app singlenode wrf.simg
 
 Example to run on a 64 cores ICX system:
-      untar the bench_2.5km.tar.bz2 and mount it to the /benchmark dir inside the container:
+      untar the conus2.5km.tar.gz and mount it to the /benchmark dir inside the container:
          ulimit -s unlimited
         export I_MPI_PIN_DOMAIN=auto
         export I_MPI_PIN_ORDER=bunch
@@ -40,10 +41,10 @@ Example to run on a 64 cores ICX system:
         export KMP_STACKSIZE=512M
         export WRF_NUM_TILES=90
         export WRFIO_NCD_LARGE_FILE_SUPPORT=1
-        $ singularity run -B bench_2.5km:/benchmark --writable-tmpfs --app singlenode wrf.simg
+        $ singularity run -B conus2.5km:/benchmark --writable-tmpfs --app singlenode wrf.simg
 
    Example to run from inside the container: 
-      $ singularity shell -B bench_2.5km:/benchmark --app singlenode wrf.simg 
+      $ singularity shell -B conus2.5km:/benchmark --app singlenode wrf.simg 
       $ cd $WORKDIR/WRFV3/run 
       $ ln -s /benchmark/wrfbdy_d01 wrfbdy_d01
       $ ln -s /benchmark/wrfrst_$xxx.. wrfrst_$xxx...
