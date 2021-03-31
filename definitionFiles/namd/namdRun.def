@@ -53,10 +53,6 @@ now=`date '+%Y_%m_%d'`
 
 APPNAME="namd-avx512"
 OUTPUT_DIR=${HOME}/${APPNAME}
-APOA1="${APPNAME}_apoa1_1fs_$now.log"
-STMV="${APPNAME}_stmv_1fs_$now.log"
-APOA1_2fs="${APPNAME}_apoa1_2fs_$now.log"
-STMV_2fs="${APPNAME}_stmv_2fs_$now.log"
 
 RESULTS="${APPNAME}_$now.results"
 CSV="${APPNAME}_$now.csv"
@@ -72,12 +68,11 @@ else
 fi
 
 export APPNAME RESULTS CSV SYSCONFIG APPINFO WORKDIR RESULTS_DIR
-export APOA1 STMV APOA1_2fs STMV_2fs
 ###########################################################################
 %apprun namd 
 ###########################################################################
+
 echo > $RESULTS_DIR/$RESULTS
-which mpirun
 
 if [ ! -x "$RESULTS_DIR" ]; then
    mkdir $RESULTS_DIR
@@ -85,46 +80,37 @@ fi
 
 echo "Running the container on single node..."
 WORKDIR=$WORKDIR/$APPNAME
-cd $WORKDIR 
-ppn=$1
+cd $WORKDIR
 
-if [ -z "$ppn" ]; then
-    ppn=`nproc`
-    echo "no ppn specified. So running with $ppn"
-    echo "Run $singularity help container.simg for more details"
-    echo " "
-fi
+N_CORES=`grep processor /proc/cpuinfo | wc -l`
+H_CORES=`expr $N_CORES / 2`
+THREADS=`lscpu | grep Thread |awk '{print $4}'`
+
+# Standard APOA1 and STMV benchmarks using NPT, 1fs timestep, PME every 4
+# APOA1 and STMV (*_nptsr_cuda) with 2fs timestep configurations (NPT, PME every 2)
+
+for WORKLOAD in apoa1/*namd  stmv/*namd
+ do
+        WL=$(basename "$WORKLOAD")
+        log=${WL}_${N_CORES}_$now.log
+
+        echo "./namd2 +p $N_CORES +setcpuaffinity $WORKLOAD  > $RESULTS_DIR/${log} "
+        ./namd2 +p $N_CORES +setcpuaffinity $WORKLOAD > $RESULTS_DIR/${log}
+        echo "FOM for ${WL} in ns/days:" |tee -a $RESULTS_DIR/$RESULTS
+        grep 'Info: Benchmark time:' $RESULTS_DIR/${log} | awk '{s+=log($8)}END{print 1/exp(s/NR)}' |tee -a $RESULTS_DIR/$RESULTS
+
+        if [[ $WL == *"apoa1"* ]] && [[ $THREADS > 1 ]]; then
+            log=${WL}_${H_CORES}_$now.log
+            echo "./namd2 +p $H_CORES +setcpuaffinity $WORKLOAD  > $RESULTS_DIR/${log} "
+            ./namd2 +p $H_CORES +setcpuaffinity $WORKLOAD > $RESULTS_DIR/${log}
+            echo "FOM for ${WL} in ns/days:" |tee -a $RESULTS_DIR/$RESULTS
+            grep 'Info: Benchmark time:' $RESULTS_DIR/${log} | awk '{s+=log($8)}END{print 1/exp(s/NR)}' |tee -a $RESULTS_DIR/$RESULTS
+        fi
+
+ done
 
 
-var=$((ppn - 1))
-echo "./namd2 +p $ppn apoa1/apoa1.namd +pemap 0-${var} > $RESULTS_DIR/$APOA1 "
-./namd2 +p $ppn apoa1/apoa1.namd +pemap 0-${var} > $RESULTS_DIR/$APOA1
-
-echo "./namd2 +p $ppn stmv/stmv.namd +pemap 0-${var} > $RESULTS_DIR/$STMV"
-./namd2 +p $ppn stmv/stmv.namd +pemap 0-${var} > $RESULTS_DIR/$STMV
-echo "NAMD run completed"
-
-echo "./namd2 +p $ppn apoa1/apoa1_nptsr_cuda.namd +pemap 0-${var} > $RESULTS_DIR/$APOA1_2fs "
-./namd2 +p $ppn apoa1/apoa1_nptsr_cuda.namd +pemap 0-${var} > $RESULTS_DIR/$APOA1_2fs
-
-echo "./namd2 +p $ppn stmv/stmv_nptsr_cuda.namd +pemap 0-${var} > $RESULTS_DIR/$STMV_2fs"
-./namd2 +p $ppn stmv/stmv_nptsr_cuda.namd +pemap 0-${var} > $RESULTS_DIR/$STMV_2fs
-echo "NAMD run completed"
-
-
-echo "FOM for APOA1 in ns/days:" |tee -a $RESULTS_DIR/$RESULTS
-grep 'Info: Benchmark time:' $RESULTS_DIR/$APOA1 | awk '{s+=log($8)}END{print 1/exp(s/NR)}' |tee -a $RESULTS_DIR/$RESULTS
-
-echo "FOM for STMV in ns/days:" |tee -a $RESULTS_DIR/$RESULTS
-grep 'Info: Benchmark time:' $RESULTS_DIR/$STMV | awk '{s+=log($8)}END{print 1/exp(s/NR)}' |tee -a $RESULTS_DIR/$RESULTS
-
-echo "FOM for APOA1_2fs in ns/days:" |tee -a $RESULTS_DIR/$RESULTS
-grep 'Info: Benchmark time:' $RESULTS_DIR/$APOA1_2fs | awk '{s+=log($8)}END{print 1/exp(s/NR)}' |tee -a $RESULTS_DIR/$RESULTS
-
-echo "FOM for STMV_2fs in ns/days:" |tee -a $RESULTS_DIR/$RESULTS
-grep 'Info: Benchmark time:' $RESULTS_DIR/$STMV_2fs | awk '{s+=log($8)}END{print 1/exp(s/NR)}' |tee -a $RESULTS_DIR/$RESULTS
-
-awk 'BEGIN{print "WORKLOAD,FOM,UNIT"}{print $1","$2",""ns/days"}' ${RESULTS_DIR}/${RESULTS} >> ${RESULTS_DIR}/${CSV}
+echo "APOA1 workloads run with and without hyperthreads. The performance results would be the highest value. "
 echo "Results are in $RESULTS_DIR"
 
 #################
@@ -196,8 +182,6 @@ echo "./namd2_mpi +ppn $ppn $WORKLOAD/$WORKLOAD.namd +pemap $pemapArgs +commap $
 ##########################
 %apprun multinodeResults
 #########################
-CSV="multinode-$CSV"
-rm -rf $RESULTS_DIR/$CSV
 rm -rf $RESULTS_DIR/$RESULTS
 
 for log in ${RESULTS_DIR}/*nodes*
@@ -207,8 +191,6 @@ do
         printf "$filename:  " |tee -a $RESULTS_DIR/$RESULTS; grep 'Info: Benchmark time:' $log | awk '{s+=log($8)}END{print 1/exp(s/NR)}'|tee -a ${RESULTS_DIR}/${RESULTS}
         echo |tee -a ${RESULTS_DIR}/${RESULTS}
 done
-
-awk 'BEGIN{print "WORKLOAD,FOM,UNIT"}{print $1","$2",""ns/days"}' ${RESULTS_DIR}/${RESULTS} >> ${RESULTS_DIR}/${CSV}
 
 echo "Logs are available in $RESULTS_DIR."
 echo "FOM is in ns/days. Higher is better. Choose the highest value for each workload accross all the runs."
