@@ -19,8 +19,6 @@
 			- STMV Download Location:
 			     - (http://www.ks.uiuc.edu/Research/namd/utilities/stmv.tar.gz)
 			     - (http://www.ks.uiuc.edu/Research/namd/2.13/benchmarks/stmv_nptsr_cuda.namd)
-			
-sed -i 's/ldbalancer.*none//g' stmv_nptsr_cuda.namd 
 		* TCL 
 		-	Download Location: (https://github.com/tcltk/tcl.git)
 		-	License Location: (https://www.tcl.tk/software/tcltk/license.html)
