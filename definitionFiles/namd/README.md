@@ -13,8 +13,14 @@
 			- License: (http://www.ks.uiuc.edu/Research/namd/2.9/ug/node1.html)
 		Legal Notice: Please note that NAMD is licensed for “non-commercial use only” per the terms of the license. Please review the full license text at https://www.ks.uiuc.edu/Research/namd/license.html
 		* NAMD Benchmark Files 
-			- APOA1 Download Location: (http://www.ks.uiuc.edu/Research/namd/utilities/apoa1.tar.gz)
-			- STMV Download Location:(http://www.ks.uiuc.edu/Research/namd/utilities/stmv.tar.gz)
+			- APOA1 Download Location: 
+			     - (http://www.ks.uiuc.edu/Research/namd/utilities/apoa1.tar.gz)
+			     - (http://www.ks.uiuc.edu/Research/namd/2.13/benchmarks/apoa1_nptsr_cuda.namd)
+			- STMV Download Location:
+			     - (http://www.ks.uiuc.edu/Research/namd/utilities/stmv.tar.gz)
+			     - (http://www.ks.uiuc.edu/Research/namd/2.13/benchmarks/stmv_nptsr_cuda.namd)
+			
+sed -i 's/ldbalancer.*none//g' stmv_nptsr_cuda.namd 
 		* TCL 
 		-	Download Location: (https://github.com/tcltk/tcl.git)
 		-	License Location: (https://www.tcl.tk/software/tcltk/license.html)
